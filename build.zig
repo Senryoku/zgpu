@@ -120,22 +120,24 @@ pub fn build(b: *std.Build) void {
     linkSystemDeps(b, zdawn);
     addLibraryPathsTo(zdawn);
 
-    zdawn.linkSystemLibrary("dawn");
+    zdawn.linkSystemLibrary("dawn_native");
+    zdawn.linkSystemLibrary("webgpu_dawn");
     zdawn.linkLibC();
     if (target.result.abi != .msvc)
         zdawn.linkLibCpp();
 
     zdawn.addIncludePath(b.path("libs/dawn/include"));
+    zdawn.addIncludePath(b.path("libs/dawn/gen/include"));
     zdawn.addIncludePath(b.path("src"));
 
     zdawn.addCSourceFile(.{
         .file = b.path("src/dawn.cpp"),
         .flags = &.{ "-std=c++17", "-fno-sanitize=undefined" },
     });
-    zdawn.addCSourceFile(.{
-        .file = b.path("src/dawn_proc.c"),
-        .flags = &.{"-fno-sanitize=undefined"},
-    });
+    // zdawn.addCSourceFile(.{
+    //     .file = b.path("src/dawn_proc.c"),
+    //     .flags = &.{"-fno-sanitize=undefined"},
+    // });
 
     const test_step = b.step("test", "Run zgpu tests");
 
@@ -146,6 +148,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     tests.addIncludePath(b.path("libs/dawn/include"));
+    tests.addIncludePath(b.path("libs/dawn/gen/include"));
     tests.linkLibrary(zdawn);
     linkSystemDeps(b, tests);
     addLibraryPathsTo(tests);

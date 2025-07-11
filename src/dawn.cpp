@@ -22,11 +22,11 @@ WGPUInstance dniGetWgpuInstance(DawnNativeInstance dni) {
     return reinterpret_cast<dawn::native::Instance*>(dni)->Get();
 }
 
-void dniDiscoverDefaultAdapters(DawnNativeInstance dni) {
-    assert(dni);
-    dawn::native::Instance* instance = reinterpret_cast<dawn::native::Instance*>(dni);
-    instance->DiscoverDefaultAdapters();
-}
+//void dniDiscoverDefaultAdapters(DawnNativeInstance dni) {
+//    assert(dni);
+//    dawn::native::Instance* instance = reinterpret_cast<dawn::native::Instance*>(dni);
+//    instance->DiscoverDefaultAdapters();
+//}
 
 const DawnProcTable* dnGetProcs(void) {
     return &dawn::native::GetProcs();
