@@ -2970,11 +2970,27 @@ pub const TextureView = *opaque {
     extern fn wgpuTextureViewRelease(texture_view: TextureView) void;
 };
 
+//
+// Section
+//
+
+
+pub const InstanceFeatureName = enum(u32) {
+    timed_wait_any = 0x00000001,
+    shader_source_spirv = 0x00000002,
+    multiple_devices_per_adapter = 0x00000003,
+};
+pub const InstanceLimits = extern struct {
+    next_in_chain: ?*ChainedStructOut = null,
+    timed_wait_any_max_count: usize,
+};
 pub const InstanceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
+    required_feature_count: usize = 0,
+    required_features: ?*const InstanceFeatureName = null,
+    required_limits: ?*const InstanceLimits = null,
 };
-pub inline fn createInstance(desc: InstanceDescriptor) Instance {
-    _ = desc;
-    return wgpuCreateInstance(null);
+pub inline fn createInstance(desc: ?*const InstanceDescriptor) Instance {
+    return wgpuCreateInstance(desc);
 }
 extern fn wgpuCreateInstance(desc: ?*const InstanceDescriptor) Instance;

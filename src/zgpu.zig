@@ -76,8 +76,6 @@ pub const GraphicsContextOptions = struct {
     required_limits: ?*const wgpu.RequiredLimits = null,
 };
 
-extern fn wgpuCreateInstance() void;
-
 pub const GraphicsContext = struct {
     pub const swapchain_format = wgpu.TextureFormat.bgra8_unorm;
 
@@ -85,7 +83,7 @@ pub const GraphicsContext = struct {
 
     stats: FrameStats = .{},
 
-    native_instance: DawnNativeInstance,
+    // native_instance: DawnNativeInstance,
     instance: wgpu.Instance,
     device: wgpu.Device,
     queue: wgpu.Queue,
@@ -123,10 +121,12 @@ pub const GraphicsContext = struct {
     ) !*GraphicsContext {
         // if (!emscripten) dawnProcSetProcs(dnGetProcs());
 
-        const native_instance = if (!emscripten) wgpuCreateInstance(null);
-        errdefer if (!emscripten) dniDestroy(native_instance);
+        // const native_instance = if (!emscripten) wgpu.createInstance(null);
+        // errdefer if (!emscripten) dniDestroy(native_instance);
 
-        const instance = if (emscripten) wgpu.createInstance(.{}) else dniGetWgpuInstance(native_instance).?;
+        // const instance = if (emscripten) wgpu.createInstance(.{}) else dniGetWgpuInstance(native_instance).?;
+
+        const instance = wgpu.createInstance(null);
 
         const adapter = adapter: {
             const Response = struct {
@@ -272,7 +272,7 @@ pub const GraphicsContext = struct {
         const gctx = try allocator.create(GraphicsContext);
         gctx.* = .{
             .window_provider = window_provider,
-            .native_instance = if (emscripten) null else native_instance,
+            // .native_instance = if (emscripten) null else native_instance,
             .instance = instance,
             .device = device,
             .queue = device.getQueue(),
@@ -327,7 +327,7 @@ pub const GraphicsContext = struct {
         gctx.swapchain.release();
         gctx.queue.release();
         gctx.device.release();
-        if (!emscripten) dniDestroy(gctx.native_instance);
+        // if (!emscripten) dniDestroy(gctx.native_instance);
         allocator.destroy(gctx);
     }
 
@@ -1113,15 +1113,15 @@ pub const GraphicsContext = struct {
 };
 
 // Defined in dawn.cpp
-const DawnNativeInstance = ?*opaque {};
-const DawnProcsTable = ?*opaque {};
-extern fn dniCreate() DawnNativeInstance;
-extern fn dniDestroy(dni: DawnNativeInstance) void;
-extern fn dniGetWgpuInstance(dni: DawnNativeInstance) ?wgpu.Instance;
-extern fn dnGetProcs() DawnProcsTable;
+// const DawnNativeInstance = ?*opaque {};
+// const DawnProcsTable = ?*opaque {};
+// extern fn dniCreate() DawnNativeInstance;
+// extern fn dniDestroy(dni: DawnNativeInstance) void;
+// extern fn dniGetWgpuInstance(dni: DawnNativeInstance) ?wgpu.Instance;
+// extern fn dnGetProcs() DawnProcsTable;
 
 // Defined in Dawn codebase
-extern fn dawnProcSetProcs(procs: DawnProcsTable) void;
+// extern fn dawnProcSetProcs(procs: DawnProcsTable) void;
 
 extern fn emscripten_sleep(ms: u32) void;
 
