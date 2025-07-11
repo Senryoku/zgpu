@@ -45,5 +45,9 @@
             .hash = "N-V-__8AAIz1QAKx8C8vft2YoHjGTjEAkH2QMR2UiAo8xZJ-",
             .lazy = true,
         },
+        .webgpu_headers = .{
+            .url = "https://github.com/a-day-old-bagel/webgpu-headers/archive/5a6c26300f21de0c42732f441f8fd5e8d18562b0.tar.gz",
+            .hash = "N-V-__8AAC6UCADq8z5G54i45wUJEp8GVDppgucVOjrIlb2v",
+        },
     },
 }

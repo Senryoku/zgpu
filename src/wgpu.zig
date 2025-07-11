@@ -3,7 +3,8 @@ const emscripten = @import("builtin").target.os.tag == .emscripten;
 
 test "extern struct ABI compatibility" {
     @setEvalBranchQuota(10_000);
-    const wgpu = @cImport(@cInclude("dawn/webgpu.h"));
+    // const wgpu = @cImport(@cInclude("dawn/webgpu.h"));
+    const wgpu = @cImport(@cInclude("webgpu.h"));
     inline for (comptime std.meta.declarations(@This())) |decl| {
         const ZigType = @field(@This(), decl.name);
         if (@TypeOf(ZigType) != type) {
@@ -713,6 +714,11 @@ pub const AdapterProperties = extern struct {
     compatibility_mode: bool,
 };
 
+pub const SupportedFeatures = extern struct {
+    feature_count: usize,
+    features: ?[*]FeatureName,
+};
+
 pub const BindGroupEntry = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     binding: u32,
@@ -1336,10 +1342,10 @@ pub const Adapter = *opaque {
     }
     extern fn wgpuAdapterCreateDevice(adapter: Adapter, descriptor: *const DeviceDescriptor) Device;
 
-    pub fn enumerateFeatures(adapter: Adapter, features: ?[*]FeatureName) usize {
-        return wgpuAdapterEnumerateFeatures(adapter, features);
+    pub fn getFeatures(adapter: Adapter, features: *SupportedFeatures) void {
+        wgpuAdapterGetFeatures(adapter, features);
     }
-    extern fn wgpuAdapterEnumerateFeatures(adapter: Adapter, features: ?[*]FeatureName) usize;
+    extern fn wgpuAdapterGetFeatures(adapter: Adapter, features: *SupportedFeatures) usize;
 
     pub fn getLimits(adapter: Adapter, limits: *SupportedLimits) bool {
         return wgpuAdapterGetLimits(adapter, limits);

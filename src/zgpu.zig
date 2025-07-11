@@ -76,6 +76,8 @@ pub const GraphicsContextOptions = struct {
     required_limits: ?*const wgpu.RequiredLimits = null,
 };
 
+extern fn wgpuCreateInstance() void;
+
 pub const GraphicsContext = struct {
     pub const swapchain_format = wgpu.TextureFormat.bgra8_unorm;
 
@@ -119,9 +121,9 @@ pub const GraphicsContext = struct {
         window_provider: WindowProvider,
         options: GraphicsContextOptions,
     ) !*GraphicsContext {
-        if (!emscripten) dawnProcSetProcs(dnGetProcs());
+        // if (!emscripten) dawnProcSetProcs(dnGetProcs());
 
-        const native_instance = if (!emscripten) dniCreate();
+        const native_instance = if (!emscripten) wgpuCreateInstance(null);
         errdefer if (!emscripten) dniDestroy(native_instance);
 
         const instance = if (emscripten) wgpu.createInstance(.{}) else dniGetWgpuInstance(native_instance).?;
