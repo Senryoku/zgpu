@@ -50,10 +50,12 @@ pub const AddressMode = enum(u32) {
     clamp_to_edge = 0x00000002,
 };
 
-pub const AlphaMode = enum(u32) {
-    premultiplied = 0x00000000,
-    unpremultiplied = 0x00000001,
-    opaq = 0x00000002,
+pub const CompositeAlphaMode = enum(u32) {
+    auto = 0x00000000,
+    opaq = 0x00000001,
+    premultiplied = 0x00000002,
+    unpremultiplied = 0x00000003,
+    inherit = 0x00000004,
 };
 
 pub const BackendType = enum(u32) {
@@ -299,17 +301,12 @@ pub const PowerPreference = enum(u32) {
     high_performance = 0x00000002,
 };
 
-pub const PresentMode = switch (emscripten) {
-    true => enum(u32) {
-        fifo = 0x00000001,
-        immediate = 0x00000003,
-        mailbox = 0x00000004,
-    },
-    false => enum(u32) {
-        immediate = 0x00000000,
-        mailbox = 0x00000001,
-        fifo = 0x00000002,
-    },
+pub const PresentMode = enum(u32) {
+    undefined = 0x00000000,
+    fifo = 0x00000001,
+    fifo_relaxed = 0x00000002,
+    immediate = 0x00000003,
+    mailbox = 0x00000004,
 };
 
 pub const PrimitiveTopology = switch (emscripten) {
@@ -359,6 +356,16 @@ pub const RequestDeviceStatus = enum(u32) {
     success = 0x00000000,
     err = 0x00000001,
     unknown = 0x00000002,
+};
+
+pub const SurfaceGetCurrentTextureStatus = enum(u32) {
+    undefined = 0x00000000,
+    success_optimal = 0x00000001,
+    success_suboptimal = 0x00000002,
+    timeout = 0x00000003,
+    outdated = 0x00000004,
+    lost = 0x00000005,
+    err = 0x00000006,
 };
 
 pub const SurfaceDescriptorFromMetalLayer = extern struct {
@@ -985,14 +992,23 @@ pub const ShaderModuleWGSLDescriptor = extern struct {
     code: [*:0]const u8,
 };
 
-pub const SwapChainDescriptor = extern struct {
+pub const SurfaceConfiguration = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
-    usage: TextureUsage,
+    device: Device,
     format: TextureFormat,
+    usage: TextureUsage,
     width: u32,
     height: u32,
-    present_mode: PresentMode,
+    view_format_count: usize = 0,
+    view_formats: ?[*]TextureFormat = null,
+    alpha_mode: CompositeAlphaMode = .auto,
+    present_mode: PresentMode = .undefined,
+};
+
+pub const SurfaceTexture = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    texture: ?Texture = null,
+    status: SurfaceGetCurrentTextureStatus = .undefined,
 };
 
 pub const Extent2D = extern struct {
@@ -1226,17 +1242,17 @@ pub const CommandBufferDescriptor = extern struct {
     label: ?[*:0]const u8 = null,
 };
 
-pub const CopyTextureForBrowserOptions = extern struct {
-    next_in_chain: ?*const ChainedStruct = null,
-    flip_y: bool,
-    needs_color_space_conversion: bool,
-    src_alpha_mode: AlphaMode,
-    src_transfer_function_parameters: ?[*]const f32,
-    conversion_matrix: ?[*]const f32,
-    dst_transfer_function_parameters: ?[*]const f32,
-    dst_alpha_mode: AlphaMode,
-    internal_usage: bool,
-};
+// pub const CopyTextureForBrowserOptions = extern struct {
+//     next_in_chain: ?*const ChainedStruct = null,
+//     flip_y: bool,
+//     needs_color_space_conversion: bool,
+//     src_alpha_mode: AlphaMode,
+//     src_transfer_function_parameters: ?[*]const f32,
+//     conversion_matrix: ?[*]const f32,
+//     dst_transfer_function_parameters: ?[*]const f32,
+//     dst_alpha_mode: AlphaMode,
+//     internal_usage: bool,
+// };
 
 pub const TextureViewDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
@@ -1377,10 +1393,10 @@ pub const Adapter = *opaque {
         userdata: ?*anyopaque,
     ) void;
 
-    pub fn reference(adapter: Adapter) void {
-        wgpuAdapterReference(adapter);
+    pub fn addRef(adapter: Adapter) void {
+        wgpuAdapterAddRef(adapter);
     }
-    extern fn wgpuAdapterReference(adapter: Adapter) void;
+    extern fn wgpuAdapterAddRef(adapter: Adapter) void;
 
     pub fn release(adapter: Adapter) void {
         wgpuAdapterRelease(adapter);
@@ -1394,10 +1410,10 @@ pub const BindGroup = *opaque {
     }
     extern fn wgpuBindGroupSetLabel(bind_group: BindGroup, label: ?[*:0]const u8) void;
 
-    pub fn reference(bind_group: BindGroup) void {
-        wgpuBindGroupReference(bind_group);
+    pub fn addRef(bind_group: BindGroup) void {
+        wgpuBindGroupAddRef(bind_group);
     }
-    extern fn wgpuBindGroupReference(bind_group: BindGroup) void;
+    extern fn wgpuBindGroupAddRef(bind_group: BindGroup) void;
 
     pub fn release(bind_group: BindGroup) void {
         wgpuBindGroupRelease(bind_group);
@@ -1411,10 +1427,10 @@ pub const BindGroupLayout = *opaque {
     }
     extern fn wgpuBindGroupLayoutSetLabel(bind_group_layout: BindGroupLayout, label: ?[*:0]const u8) void;
 
-    pub fn reference(bind_group_layout: BindGroupLayout) void {
-        wgpuBindGroupLayoutReference(bind_group_layout);
+    pub fn addRef(bind_group_layout: BindGroupLayout) void {
+        wgpuBindGroupLayoutAddRef(bind_group_layout);
     }
-    extern fn wgpuBindGroupLayoutReference(bind_group_layout: BindGroupLayout) void;
+    extern fn wgpuBindGroupLayoutAddRef(bind_group_layout: BindGroupLayout) void;
 
     pub fn release(bind_group_layout: BindGroupLayout) void {
         wgpuBindGroupLayoutRelease(bind_group_layout);
@@ -1494,10 +1510,10 @@ pub const Buffer = *opaque {
     }
     extern fn wgpuBufferUnmap(buffer: Buffer) void;
 
-    pub fn reference(buffer: Buffer) void {
-        wgpuBufferReference(buffer);
+    pub fn addRef(buffer: Buffer) void {
+        wgpuBufferAddRef(buffer);
     }
-    extern fn wgpuBufferReference(buffer: Buffer) void;
+    extern fn wgpuBufferAddRef(buffer: Buffer) void;
 
     pub fn release(buffer: Buffer) void {
         wgpuBufferRelease(buffer);
@@ -1511,10 +1527,10 @@ pub const CommandBuffer = *opaque {
     }
     extern fn wgpuCommandBufferSetLabel(command_buffer: CommandBuffer, label: ?[*:0]const u8) void;
 
-    pub fn reference(command_buffer: CommandBuffer) void {
-        wgpuCommandBufferReference(command_buffer);
+    pub fn addRef(command_buffer: CommandBuffer) void {
+        wgpuCommandBufferAddRef(command_buffer);
     }
-    extern fn wgpuCommandBufferReference(command_buffer: CommandBuffer) void;
+    extern fn wgpuCommandBufferAddRef(command_buffer: CommandBuffer) void;
 
     pub fn release(command_buffer: CommandBuffer) void {
         wgpuCommandBufferRelease(command_buffer);
@@ -1717,10 +1733,10 @@ pub const CommandEncoder = *opaque {
         query_index: u32,
     ) void;
 
-    pub fn reference(command_encoder: CommandEncoder) void {
-        wgpuCommandEncoderReference(command_encoder);
+    pub fn addRef(command_encoder: CommandEncoder) void {
+        wgpuCommandEncoderAddRef(command_encoder);
     }
-    extern fn wgpuCommandEncoderReference(command_encoder: CommandEncoder) void;
+    extern fn wgpuCommandEncoderAddRef(command_encoder: CommandEncoder) void;
 
     pub fn release(command_encoder: CommandEncoder) void {
         wgpuCommandEncoderRelease(command_encoder);
@@ -1836,10 +1852,10 @@ pub const ComputePassEncoder = *opaque {
         query_index: u32,
     ) void;
 
-    pub fn reference(compute_pass_encoder: ComputePassEncoder) void {
-        wgpuComputePassEncoderReference(compute_pass_encoder);
+    pub fn addRef(compute_pass_encoder: ComputePassEncoder) void {
+        wgpuComputePassEncoderAddRef(compute_pass_encoder);
     }
-    extern fn wgpuComputePassEncoderReference(compute_pass_encoder: ComputePassEncoder) void;
+    extern fn wgpuComputePassEncoderAddRef(compute_pass_encoder: ComputePassEncoder) void;
 
     pub fn release(compute_pass_encoder: ComputePassEncoder) void {
         wgpuComputePassEncoderRelease(compute_pass_encoder);
@@ -1861,10 +1877,10 @@ pub const ComputePipeline = *opaque {
     }
     extern fn wgpuComputePipelineSetLabel(compute_pipeline: ComputePipeline, label: ?[*:0]const u8) void;
 
-    pub fn reference(compute_pipeline: ComputePipeline) void {
-        wgpuComputePipelineReference(compute_pipeline);
+    pub fn addRef(compute_pipeline: ComputePipeline) void {
+        wgpuComputePipelineAddRef(compute_pipeline);
     }
-    extern fn wgpuComputePipelineReference(compute_pipeline: ComputePipeline) void;
+    extern fn wgpuComputePipelineAddRef(compute_pipeline: ComputePipeline) void;
 
     pub fn release(compute_pipeline: ComputePipeline) void {
         wgpuComputePipelineRelease(compute_pipeline);
@@ -1992,15 +2008,6 @@ pub const Device = *opaque {
     }
     extern fn wgpuDeviceCreateShaderModule(device: Device, descriptor: *const ShaderModuleDescriptor) ShaderModule;
 
-    pub fn createSwapChain(device: Device, surface: ?Surface, descriptor: SwapChainDescriptor) SwapChain {
-        return wgpuDeviceCreateSwapChain(device, surface, &descriptor);
-    }
-    extern fn wgpuDeviceCreateSwapChain(
-        device: Device,
-        surface: ?Surface,
-        descriptor: *const SwapChainDescriptor,
-    ) SwapChain;
-
     pub fn createTexture(device: Device, descriptor: TextureDescriptor) Texture {
         return wgpuDeviceCreateTexture(device, &descriptor);
     }
@@ -2093,10 +2100,10 @@ pub const Device = *opaque {
     }
     extern fn wgpuDeviceTick(device: Device) void;
 
-    pub fn reference(device: Device) void {
-        wgpuDeviceReference(device);
+    pub fn addRef(device: Device) void {
+        wgpuDeviceAddRef(device);
     }
-    extern fn wgpuDeviceReference(device: Device) void;
+    extern fn wgpuDeviceAddRef(device: Device) void;
 
     pub fn release(device: Device) void {
         wgpuDeviceRelease(device);
@@ -2115,10 +2122,10 @@ pub const ExternalTexture = *opaque {
     }
     extern fn wgpuExternalTextureSetLabel(external_texture: ExternalTexture, label: ?[*:0]const u8) void;
 
-    pub fn reference(external_texture: ExternalTexture) void {
-        wgpuExternalTextureReference(external_texture);
+    pub fn addRef(external_texture: ExternalTexture) void {
+        wgpuExternalTextureAddRef(external_texture);
     }
-    extern fn wgpuExternalTextureReference(external_texture: ExternalTexture) void;
+    extern fn wgpuExternalTextureAddRef(external_texture: ExternalTexture) void;
 
     pub fn release(external_texture: ExternalTexture) void {
         wgpuExternalTextureRelease(external_texture);
@@ -2147,10 +2154,10 @@ pub const Instance = *opaque {
         userdata: ?*anyopaque,
     ) void;
 
-    pub fn reference(instance: Instance) void {
-        wgpuInstanceReference(instance);
+    pub fn addRef(instance: Instance) void {
+        wgpuInstanceAddRef(instance);
     }
-    extern fn wgpuInstanceReference(instance: Instance) void;
+    extern fn wgpuInstanceAddRef(instance: Instance) void;
 
     pub fn release(instance: Instance) void {
         wgpuInstanceRelease(instance);
@@ -2164,10 +2171,10 @@ pub const PipelineLayout = *opaque {
     }
     extern fn wgpuPipelineLayoutSetLabel(pipeline_layout: PipelineLayout, label: ?[*:0]const u8) void;
 
-    pub fn reference(pipeline_layout: PipelineLayout) void {
-        wgpuPipelineLayoutReference(pipeline_layout);
+    pub fn addRef(pipeline_layout: PipelineLayout) void {
+        wgpuPipelineLayoutAddRef(pipeline_layout);
     }
-    extern fn wgpuPipelineLayoutReference(pipeline_layout: PipelineLayout) void;
+    extern fn wgpuPipelineLayoutAddRef(pipeline_layout: PipelineLayout) void;
 
     pub fn release(pipeline_layout: PipelineLayout) void {
         wgpuPipelineLayoutRelease(pipeline_layout);
@@ -2186,10 +2193,10 @@ pub const QuerySet = *opaque {
     }
     extern fn wgpuQuerySetSetLabel(query_set: QuerySet, label: ?[*:0]const u8) void;
 
-    pub fn reference(query_set: QuerySet) void {
-        wgpuQuerySetReference(query_set);
+    pub fn addRef(query_set: QuerySet) void {
+        wgpuQuerySetAddRef(query_set);
     }
-    extern fn wgpuQuerySetReference(query_set: QuerySet) void;
+    extern fn wgpuQuerySetAddRef(query_set: QuerySet) void;
 
     pub fn release(query_set: QuerySet) void {
         wgpuQuerySetRelease(query_set);
@@ -2198,39 +2205,39 @@ pub const QuerySet = *opaque {
 };
 
 pub const Queue = *opaque {
-    pub fn copyExternalTextureForBrowser(
-        queue: Queue,
-        source: ImageCopyExternalTexture,
-        destination: ImageCopyTexture,
-        copy_size: Extent3D,
-        options: CopyTextureForBrowserOptions,
-    ) void {
-        wgpuQueueCopyExternalTextureForBrowser(queue, &source, &destination, &copy_size, &options);
-    }
-    extern fn wgpuQueueCopyExternalTextureForBrowser(
-        queue: Queue,
-        source: *const ImageCopyExternalTexture,
-        destination: *const ImageCopyTexture,
-        copy_size: *const Extent3D,
-        options: *const CopyTextureForBrowserOptions,
-    ) void;
-
-    pub fn copyTextureForBrowser(
-        queue: Queue,
-        source: ImageCopyTexture,
-        destination: ImageCopyTexture,
-        copy_size: Extent3D,
-        options: CopyTextureForBrowserOptions,
-    ) void {
-        wgpuQueueCopyTextureForBrowser(queue, &source, &destination, &copy_size, &options);
-    }
-    extern fn wgpuQueueCopyTextureForBrowser(
-        queue: Queue,
-        source: *const ImageCopyTexture,
-        destination: *const ImageCopyTexture,
-        copy_size: *const Extent3D,
-        options: *const CopyTextureForBrowserOptions,
-    ) void;
+    // pub fn copyExternalTextureForBrowser(
+    //     queue: Queue,
+    //     source: ImageCopyExternalTexture,
+    //     destination: ImageCopyTexture,
+    //     copy_size: Extent3D,
+    //     options: CopyTextureForBrowserOptions,
+    // ) void {
+    //     wgpuQueueCopyExternalTextureForBrowser(queue, &source, &destination, &copy_size, &options);
+    // }
+    // extern fn wgpuQueueCopyExternalTextureForBrowser(
+    //     queue: Queue,
+    //     source: *const ImageCopyExternalTexture,
+    //     destination: *const ImageCopyTexture,
+    //     copy_size: *const Extent3D,
+    //     options: *const CopyTextureForBrowserOptions,
+    // ) void;
+    //
+    // pub fn copyTextureForBrowser(
+    //     queue: Queue,
+    //     source: ImageCopyTexture,
+    //     destination: ImageCopyTexture,
+    //     copy_size: Extent3D,
+    //     options: CopyTextureForBrowserOptions,
+    // ) void {
+    //     wgpuQueueCopyTextureForBrowser(queue, &source, &destination, &copy_size, &options);
+    // }
+    // extern fn wgpuQueueCopyTextureForBrowser(
+    //     queue: Queue,
+    //     source: *const ImageCopyTexture,
+    //     destination: *const ImageCopyTexture,
+    //     copy_size: *const Extent3D,
+    //     options: *const CopyTextureForBrowserOptions,
+    // ) void;
 
     pub fn onSubmittedWorkDone(
         queue: Queue,
@@ -2320,10 +2327,10 @@ pub const Queue = *opaque {
         write_size: *const Extent3D,
     ) void;
 
-    pub fn reference(queue: Queue) void {
-        wgpuQueueReference(queue);
+    pub fn addRef(queue: Queue) void {
+        wgpuQueueAddRef(queue);
     }
-    extern fn wgpuQueueReference(queue: Queue) void;
+    extern fn wgpuQueueAddRef(queue: Queue) void;
 
     pub fn release(queue: Queue) void {
         wgpuQueueRelease(queue);
@@ -2332,10 +2339,10 @@ pub const Queue = *opaque {
 };
 
 pub const RenderBundle = *opaque {
-    pub fn reference(render_bundle: RenderBundle) void {
-        wgpuRenderBundleReference(render_bundle);
+    pub fn addRef(render_bundle: RenderBundle) void {
+        wgpuRenderBundleAddRef(render_bundle);
     }
-    extern fn wgpuRenderBundleReference(render_bundle: RenderBundle) void;
+    extern fn wgpuRenderBundleAddRef(render_bundle: RenderBundle) void;
 
     pub fn release(render_bundle: RenderBundle) void {
         wgpuRenderBundleRelease(render_bundle);
@@ -2526,10 +2533,10 @@ pub const RenderBundleEncoder = *opaque {
         size: u64,
     ) void;
 
-    pub fn reference(render_bundle_encoder: RenderBundleEncoder) void {
-        wgpuRenderBundleEncoderReference(render_bundle_encoder);
+    pub fn addRef(render_bundle_encoder: RenderBundleEncoder) void {
+        wgpuRenderBundleEncoderAddRef(render_bundle_encoder);
     }
-    extern fn wgpuRenderBundleEncoderReference(render_bundle_encoder: RenderBundleEncoder) void;
+    extern fn wgpuRenderBundleEncoderAddRef(render_bundle_encoder: RenderBundleEncoder) void;
 
     pub fn release(render_bundle_encoder: RenderBundleEncoder) void {
         wgpuRenderBundleEncoderRelease(render_bundle_encoder);
@@ -2792,10 +2799,10 @@ pub const RenderPassEncoder = *opaque {
         query_index: u32,
     ) void;
 
-    pub fn reference(render_pass_encoder: RenderPassEncoder) void {
-        wgpuRenderPassEncoderReference(render_pass_encoder);
+    pub fn addRef(render_pass_encoder: RenderPassEncoder) void {
+        wgpuRenderPassEncoderAddRef(render_pass_encoder);
     }
-    extern fn wgpuRenderPassEncoderReference(render_pass_encoder: RenderPassEncoder) void;
+    extern fn wgpuRenderPassEncoderAddRef(render_pass_encoder: RenderPassEncoder) void;
 
     pub fn release(render_pass_encoder: RenderPassEncoder) void {
         wgpuRenderPassEncoderRelease(render_pass_encoder);
@@ -2817,10 +2824,10 @@ pub const RenderPipeline = *opaque {
     }
     extern fn wgpuRenderPipelineSetLabel(render_pipeline: RenderPipeline, label: ?[*:0]const u8) void;
 
-    pub fn reference(render_pipeline: RenderPipeline) void {
-        wgpuRenderPipelineReference(render_pipeline);
+    pub fn addRef(render_pipeline: RenderPipeline) void {
+        wgpuRenderPipelineAddRef(render_pipeline);
     }
-    extern fn wgpuRenderPipelineReference(render_pipeline: RenderPipeline) void;
+    extern fn wgpuRenderPipelineAddRef(render_pipeline: RenderPipeline) void;
 
     pub fn release(render_pipeline: RenderPipeline) void {
         wgpuRenderPipelineRelease(render_pipeline);
@@ -2834,10 +2841,10 @@ pub const Sampler = *opaque {
     }
     extern fn wgpuSamplerSetLabel(sampler: Sampler, label: ?[*:0]const u8) void;
 
-    pub fn reference(sampler: Sampler) void {
-        wgpuSamplerReference(sampler);
+    pub fn addRef(sampler: Sampler) void {
+        wgpuSamplerAddRef(sampler);
     }
-    extern fn wgpuSamplerReference(sampler: Sampler) void;
+    extern fn wgpuSamplerAddRef(sampler: Sampler) void;
 
     pub fn release(sampler: Sampler) void {
         wgpuSamplerRelease(sampler);
@@ -2864,10 +2871,10 @@ pub const ShaderModule = *opaque {
     }
     extern fn wgpuShaderModuleSetLabel(shader_module: ShaderModule, label: ?[*:0]const u8) void;
 
-    pub fn reference(shader_module: ShaderModule) void {
-        wgpuShaderModuleReference(shader_module);
+    pub fn addRef(shader_module: ShaderModule) void {
+        wgpuShaderModuleAddRef(shader_module);
     }
-    extern fn wgpuShaderModuleReference(shader_module: ShaderModule) void;
+    extern fn wgpuShaderModuleAddRef(shader_module: ShaderModule) void;
 
     pub fn release(shader_module: ShaderModule) void {
         wgpuShaderModuleRelease(shader_module);
@@ -2876,54 +2883,33 @@ pub const ShaderModule = *opaque {
 };
 
 pub const Surface = *opaque {
-    pub fn reference(surface: Surface) void {
-        wgpuSurfaceReference(surface);
+    pub fn configure(
+        surface: Surface,
+        config: SurfaceConfiguration,
+    ) void {
+        wgpuSurfaceConfigure(surface, &config);
     }
-    extern fn wgpuSurfaceReference(surface: Surface) void;
+    extern fn wgpuSurfaceConfigure(surface: Surface, config: *const SurfaceConfiguration) void;
+
+    pub fn getCurrentTexture(surface: Surface, surface_texture: *SurfaceTexture) void {
+        return wgpuSurfaceGetCurrentTexture(surface, surface_texture);
+    }
+    extern fn wgpuSurfaceGetCurrentTexture(Surface, *SurfaceTexture) void;
+
+    pub fn present(surface: Surface) void {
+        wgpuSurfacePresent(surface);
+    }
+    extern fn wgpuSurfacePresent(surface: Surface) void;
+
+    pub fn addRef(surface: Surface) void {
+        wgpuSurfaceAddRef(surface);
+    }
+    extern fn wgpuSurfaceAddRef(surface: Surface) void;
 
     pub fn release(surface: Surface) void {
         wgpuSurfaceRelease(surface);
     }
     extern fn wgpuSurfaceRelease(surface: Surface) void;
-};
-
-pub const SwapChain = *opaque {
-    pub fn configure(
-        swap_chain: SwapChain,
-        format: TextureFormat,
-        allowed_usage: TextureUsage,
-        width: u32,
-        height: u32,
-    ) void {
-        wgpuSwapChainConfigure(swap_chain, format, allowed_usage, width, height);
-    }
-    extern fn wgpuSwapChainConfigure(
-        swap_chain: SwapChain,
-        format: TextureFormat,
-        allowed_usage: TextureUsage,
-        width: u32,
-        height: u32,
-    ) void;
-
-    pub fn getCurrentTextureView(swap_chain: SwapChain) TextureView {
-        return wgpuSwapChainGetCurrentTextureView(swap_chain);
-    }
-    extern fn wgpuSwapChainGetCurrentTextureView(swap_chain: SwapChain) TextureView;
-
-    pub fn present(swap_chain: SwapChain) void {
-        wgpuSwapChainPresent(swap_chain);
-    }
-    extern fn wgpuSwapChainPresent(swap_chain: SwapChain) void;
-
-    pub fn reference(swap_chain: SwapChain) void {
-        wgpuSwapChainReference(swap_chain);
-    }
-    extern fn wgpuSwapChainReference(swap_chain: SwapChain) void;
-
-    pub fn release(swap_chain: SwapChain) void {
-        wgpuSwapChainRelease(swap_chain);
-    }
-    extern fn wgpuSwapChainRelease(swap_chain: SwapChain) void;
 };
 
 pub const Texture = *opaque {
@@ -2942,10 +2928,10 @@ pub const Texture = *opaque {
     }
     extern fn wgpuTextureSetLabel(texture: Texture, label: ?[*:0]const u8) void;
 
-    pub fn reference(texture: Texture) void {
-        wgpuTextureReference(texture);
+    pub fn addRef(texture: Texture) void {
+        wgpuTextureAddRef(texture);
     }
-    extern fn wgpuTextureReference(texture: Texture) void;
+    extern fn wgpuTextureAddRef(texture: Texture) void;
 
     pub fn release(texture: Texture) void {
         wgpuTextureRelease(texture);
@@ -2959,10 +2945,10 @@ pub const TextureView = *opaque {
     }
     extern fn wgpuTextureViewSetLabel(texture_view: TextureView, label: ?[*:0]const u8) void;
 
-    pub fn reference(texture_view: TextureView) void {
-        wgpuTextureViewReference(texture_view);
+    pub fn addRef(texture_view: TextureView) void {
+        wgpuTextureViewAddRef(texture_view);
     }
-    extern fn wgpuTextureViewReference(texture_view: TextureView) void;
+    extern fn wgpuTextureViewAddRef(texture_view: TextureView) void;
 
     pub fn release(texture_view: TextureView) void {
         wgpuTextureViewRelease(texture_view);
@@ -2990,7 +2976,7 @@ pub const InstanceDescriptor = extern struct {
     required_features: ?*const InstanceFeatureName = null,
     required_limits: ?*const InstanceLimits = null,
 };
-pub inline fn createInstance(desc: ?*const InstanceDescriptor) Instance {
-    return wgpuCreateInstance(desc);
+pub inline fn createInstance(desc: ?InstanceDescriptor) Instance {
+    return wgpuCreateInstance(if(desc) |d| &d else null);
 }
 extern fn wgpuCreateInstance(desc: ?*const InstanceDescriptor) Instance;

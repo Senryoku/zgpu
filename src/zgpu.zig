@@ -77,7 +77,7 @@ pub const GraphicsContextOptions = struct {
 };
 
 pub const GraphicsContext = struct {
-    pub const swapchain_format = wgpu.TextureFormat.bgra8_unorm;
+    pub const surface_texture_format = wgpu.TextureFormat.bgra8_unorm;
 
     window_provider: WindowProvider,
 
@@ -85,12 +85,11 @@ pub const GraphicsContext = struct {
 
     // native_instance: DawnNativeInstance,
     instance: wgpu.Instance,
+    adapter: wgpu.Adapter,
     device: wgpu.Device,
-    queue: wgpu.Queue,
     surface: wgpu.Surface,
-    swapchain: wgpu.SwapChain,
-    swapchain_descriptor: wgpu.SwapChainDescriptor,
 
+    queue: wgpu.Queue,
     buffer_pool: BufferPool,
     texture_pool: TexturePool,
     texture_view_pool: TextureViewPool,
@@ -258,16 +257,14 @@ pub const GraphicsContext = struct {
 
         const framebuffer_size = window_provider.getFramebufferSize();
 
-        const swapchain_descriptor = wgpu.SwapChainDescriptor{
-            .label = "zig-gamedev-gctx-swapchain",
+        const surface_configuration = wgpu.SurfaceConfiguration{
+            .device = device,
+            .format = surface_texture_format,
             .usage = .{ .render_attachment = true },
-            .format = swapchain_format,
             .width = @intCast(framebuffer_size[0]),
             .height = @intCast(framebuffer_size[1]),
-            .present_mode = options.present_mode,
         };
-        const swapchain = device.createSwapChain(surface, swapchain_descriptor);
-        errdefer swapchain.release();
+        surface.configure(surface_configuration);
 
         const gctx = try allocator.create(GraphicsContext);
         gctx.* = .{
@@ -277,8 +274,6 @@ pub const GraphicsContext = struct {
             .device = device,
             .queue = device.getQueue(),
             .surface = surface,
-            .swapchain = swapchain,
-            .swapchain_descriptor = swapchain_descriptor,
             .buffer_pool = BufferPool.init(allocator, zgpu_options.buffer_pool_size),
             .texture_pool = TexturePool.init(allocator, zgpu_options.texture_pool_size),
             .texture_view_pool = TextureViewPool.init(allocator, zgpu_options.texture_view_pool_size),
@@ -324,7 +319,6 @@ pub const GraphicsContext = struct {
         gctx.render_pipeline_pool.deinit(allocator);
         gctx.compute_pipeline_pool.deinit(allocator);
         gctx.surface.release();
-        gctx.swapchain.release();
         gctx.queue.release();
         gctx.device.release();
         // if (!emscripten) dniDestroy(gctx.native_instance);
