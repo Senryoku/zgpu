@@ -226,8 +226,11 @@ pub const CullMode = enum(u32) {
 };
 
 pub const DeviceLostReason = enum(u32) {
-    undef = 0x00000000,
-    destroyed = 0x00000001,
+    // undef = 0x00000000,
+    unknown = 0x00000001,
+    destroyed = 0x00000002,
+    callback_cancelled = 0x00000003,
+    failed_creation = 0x00000004,
 };
 
 pub const ErrorFilter = enum(u32) {
@@ -237,12 +240,11 @@ pub const ErrorFilter = enum(u32) {
 };
 
 pub const ErrorType = enum(u32) {
-    no_error = 0x00000000,
-    validation = 0x00000001,
-    out_of_memory = 0x00000002,
-    internal = 0x00000003,
-    unknown = 0x00000004,
-    device_lost = 0x00000005,
+    no_error = 0x00000001,
+    validation = 0x00000002,
+    out_of_memory = 0x00000003,
+    internal = 0x00000004,
+    unknown = 0x00000005,
 };
 
 pub const FeatureLevel = enum(u32) {
@@ -252,30 +254,51 @@ pub const FeatureLevel = enum(u32) {
 };
 
 pub const FeatureName = enum(u32) {
-    undef = 0x00000000,
-    depth_clip_control = 0x00000001,
-    depth32_float_stencil8 = 0x00000002,
-    timestamp_query = 0x00000003,
-    pipeline_statistics_query = 0x00000004,
-    texture_compression_bc = 0x00000005,
+    // undef = 0x00000000,
+    // depth_clip_control = 0x00000001,
+    // depth32_float_stencil8 = 0x00000002,
+    // timestamp_query = 0x00000003,
+    // pipeline_statistics_query = 0x00000004,
+    // texture_compression_bc = 0x00000005,
+    // texture_compression_etc2 = 0x00000006,
+    // texture_compression_astc = 0x00000007,
+    // indirect_first_instance = 0x00000008,
+    // shader_f16 = 0x00000009,
+    // rg11_b10_ufloat_renderable = 0x0000000A,
+    // bgra8_unorm_storage = 0x0000000B,
+    // float32_filterable = 0x0000000C,
+    // depth_clamping = 0x000003E8,
+    // dawn_shader_float16 = 0x000003E9,
+    // dawn_internal_usages = 0x000003EA,
+    // dawn_multi_planar_formats = 0x000003EB,
+    // dawn_native = 0x000003EC,
+    // chromium_experimental_dp4a = 0x000003ED,
+    // timestamp_query_inside_passes = 0x000003EE,
+    // implicit_device_synchronization = 0x000003EF,
+    // surface_capabilities = 0x000003F0,
+    // transient_attachments = 0x000003F1,
+    // msaa_render_to_single_sampled = 0x000003F2,
+
+    core_features_and_limits = 0x00000001,
+    depth_clip_control = 0x00000002,
+    depth_32_float_stencil_8 = 0x00000003,
+    texture_compression_bc = 0x00000004,
+    texture_compression_bc_sliced_3d = 0x00000005,
     texture_compression_etc2 = 0x00000006,
     texture_compression_astc = 0x00000007,
-    indirect_first_instance = 0x00000008,
-    shader_f16 = 0x00000009,
-    rg11_b10_ufloat_renderable = 0x0000000A,
-    bgra8_unorm_storage = 0x0000000B,
-    float32_filterable = 0x0000000C,
-    depth_clamping = 0x000003E8,
-    dawn_shader_float16 = 0x000003E9,
-    dawn_internal_usages = 0x000003EA,
-    dawn_multi_planar_formats = 0x000003EB,
-    dawn_native = 0x000003EC,
-    chromium_experimental_dp4a = 0x000003ED,
-    timestamp_query_inside_passes = 0x000003EE,
-    implicit_device_synchronization = 0x000003EF,
-    surface_capabilities = 0x000003F0,
-    transient_attachments = 0x000003F1,
-    msaa_render_to_single_sampled = 0x000003F2,
+    texture_compression_astc_sliced_3d = 0x00000008,
+    timestamp_query = 0x00000009,
+    indirect_first_instance = 0x0000000A,
+    shader_f16 = 0x0000000B,
+    rg11b10_ufloat_renderable = 0x0000000C,
+    bgra8_unorm_storage = 0x0000000D,
+    float32_filterable = 0x0000000E,
+    float32_blendable = 0x0000000F,
+    clip_distances = 0x00000010,
+    dual_source_blending = 0x00000011,
+    subgroups = 0x00000012,
+    texture_formats_tier1 = 0x00000013,
+    texture_formats_tier2 = 0x00000014,
 };
 
 pub const FilterMode = enum(u32) {
@@ -378,9 +401,9 @@ pub const RequestAdapterStatus = enum(u32) {
 };
 
 pub const RequestDeviceStatus = enum(u32) {
-    success = 0x00000000,
-    err = 0x00000001,
-    unknown = 0x00000002,
+    success = 0x00000001,
+    callback_cancelled = 0x00000002,
+    err = 0x00000003,
 };
 
 pub const SurfaceGetCurrentTextureStatus = enum(u32) {
@@ -393,70 +416,56 @@ pub const SurfaceGetCurrentTextureStatus = enum(u32) {
     err = 0x00000006,
 };
 
-pub const SurfaceDescriptorFromMetalLayer = extern struct {
+pub const SurfaceSourceMetalLayer = extern struct {
     chain: ChainedStruct,
     layer: *anyopaque,
 };
 
-pub const SurfaceDescriptorFromWaylandSurface = extern struct {
+pub const SurfaceSourceWaylandSurface = extern struct {
     chain: ChainedStruct,
     display: *anyopaque,
     surface: *anyopaque,
 };
 
-pub const SurfaceDescriptorFromWindowsHWND = extern struct {
+pub const SurfaceSourceWindowsHWND = extern struct {
     chain: ChainedStruct,
     hinstance: *anyopaque,
     hwnd: *anyopaque,
 };
 
-pub const SurfaceDescriptorFromXlibWindow = extern struct {
+pub const SurfaceSourceXlibWindow = extern struct {
     chain: ChainedStruct,
     display: *anyopaque,
     window: u32,
 };
 
-pub const SurfaceDescriptorFromWindowsCoreWindow = extern struct {
+pub const SurfaceSourceWindowsCoreWindow = extern struct {
     chain: ChainedStruct,
     core_window: *anyopaque,
 };
 
-pub const SurfaceDescriptorFromWindowsSwapChainPanel = extern struct {
+pub const SurfaceSourceWindowsSwapChainPanel = extern struct {
     chain: ChainedStruct,
     swap_chain_panel: *anyopaque,
 };
 
-pub const SurfaceDescriptorFromCanvasHTMLSelector = extern struct {
+pub const SurfaceSourceCanvasHTMLSelector = extern struct {
     chain: ChainedStruct,
     selector: [*:0]const u8,
 };
 
 pub const StructType = enum(u32) {
-    invalid = 0x00000000,
-    surface_descriptor_from_metal_layer = 0x00000001,
-    surface_descriptor_from_windows_hwnd = 0x00000002,
-    surface_descriptor_from_xlib_window = 0x00000003,
-    surface_descriptor_from_canvas_html_selector = 0x00000004,
-    shader_module_spirv_descriptor = 0x00000005,
-    shader_module_wgsl_descriptor = 0x00000006,
-    surface_descriptor_from_wayland_surface = 0x00000008,
-    surface_descriptor_from_android_native_window = 0x00000009,
-    surface_descriptor_from_windows_core_window = 0x0000000B,
-    external_texture_binding_entry = 0x0000000C,
-    external_texture_binding_layout = 0x0000000D,
-    surface_descriptor_from_windows_swap_chain_panel = 0x0000000E,
-    dawn_texture_internal_usage_descriptor = 0x000003E8,
-    dawn_encoder_internal_usage_descriptor = 0x000003EB,
-    dawn_instance_descriptor = 0x000003EC,
-    dawn_cache_device_descriptor = 0x000003ED,
-    dawn_adapter_properties_power_preference = 0x000003EE,
-    dawn_buffer_descriptor_error_info_from_wire_client = 0x000003EF,
-    dawn_toggles_descriptor = 0x000003F0,
-    dawn_shader_module_spirv_options_descriptor = 0x000003F1,
-    request_adapter_options_luid = 0x000003F2,
-    request_adapter_options_get_gl_proc = 0x000003F3,
-    dawn_multisample_state_render_to_single_sampled = 0x000003F4,
-    dawn_render_pass_color_attachment_render_to_single_sampled = 0x000003F5,
+    shader_source_spirv = 0x00000001,
+    shader_source_wgsl = 0x00000002,
+    render_pass_max_draw_count = 0x00000003,
+    surface_source_metal_layer = 0x00000004,
+    surface_source_windows_hwnd = 0x00000005,
+    surface_source_xlib_window = 0x00000006,
+    surface_source_wayland_surface = 0x00000007,
+    surface_source_android_native_window = 0x00000008,
+    surface_source_xcb_window = 0x00000009,
+    surface_color_management = 0x0000000A,
+    request_adapter_webxr_options = 0x0000000B,
 };
 
 pub const SamplerBindingType = enum(u32) {
@@ -723,6 +732,10 @@ pub const TextureUsage = packed struct(u32) {
     _padding: u26 = 0,
 };
 
+//
+// Section
+//
+
 pub const Future = extern struct {
     id: u64 = 0,
 };
@@ -742,12 +755,27 @@ pub const ChainedStructOut = extern struct {
     struct_type: StructType,
 };
 
+pub const StringView = extern struct {
+    data: ?[*]const u8 = null,
+    length: usize = 0,
+
+    pub fn fromZigStr(str: []const u8) StringView {
+        return StringView{
+            .data = str.ptr,
+            .length = str.len,
+        };
+    }
+    pub fn zigStr(string_view: StringView) ?[]const u8 {
+        if (string_view.data) |dat| return dat[0..string_view.length] else return null;
+    }
+};
+
 pub const AdapterInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    vendor_name: ?[*:0]const u8 = null,
-    architecture: ?[*:0]const u8 = null,
-    device: ?[*:0]const u8 = null,
-    description: ?[*:0]const u8 = null,
+    vendor_name: StringView = .{},
+    architecture: StringView = .{},
+    device: StringView = .{},
+    description: StringView = .{},
     backend_type: BackendType = .undef,
     adapter_type: AdapterType = .unknown,
     vendor_id: u32 = 0,
@@ -760,6 +788,29 @@ pub const RequestAdapterCallbackInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     mode: CallbackMode = .undef,
     callback: ?RequestAdapterCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
+pub const RequestDeviceCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undef,
+    callback: ?RequestDeviceCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
+pub const DeviceLostCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undef,
+    callback: ?DeviceLostCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
+pub const UncapturedErrorCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    callback: ?UncapturedErrorCallback = null,
     userdata_1: ?*anyopaque = null,
     userdata_2: ?*anyopaque = null,
 };
@@ -1027,12 +1078,12 @@ pub const SamplerDescriptor = extern struct {
 
 pub const ShaderModuleDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
 };
 
-pub const ShaderModuleWGSLDescriptor = extern struct {
+pub const ShaderSourceWGSL = extern struct {
     chain: ChainedStruct,
-    code: [*:0]const u8,
+    code: StringView,
 };
 
 pub const SurfaceConfiguration = extern struct {
@@ -1082,6 +1133,7 @@ pub const Limits = extern struct {
     const u32_undefined: u32 = 0xFFFFFFFF;
     const u64_undefined: u64 = 0xFFFFFFFFFFFFFFFF;
 
+    next_in_chain: ?*const ChainedStruct = null,
     max_texture_dimension_1d: u32 = u32_undefined,
     max_texture_dimension_2d: u32 = u32_undefined,
     max_texture_dimension_3d: u32 = u32_undefined,
@@ -1104,7 +1156,6 @@ pub const Limits = extern struct {
     max_buffer_size: u64 = u64_undefined,
     max_vertex_attributes: u32 = u32_undefined,
     max_vertex_buffer_array_stride: u32 = u32_undefined,
-    max_inter_stage_shader_components: u32 = u32_undefined,
     max_inter_stage_shader_variables: u32 = u32_undefined,
     max_color_attachments: u32 = u32_undefined,
     max_color_attachment_bytes_per_sample: u32 = u32_undefined,
@@ -1114,6 +1165,7 @@ pub const Limits = extern struct {
     max_compute_workgroup_size_y: u32 = u32_undefined,
     max_compute_workgroup_size_z: u32 = u32_undefined,
     max_compute_workgroups_per_dimension: u32 = u32_undefined,
+    max_immediate_size: u32 = u32_undefined,
 };
 
 pub const RequiredLimits = extern struct {
@@ -1128,7 +1180,7 @@ pub const SupportedLimits = extern struct {
 
 pub const QueueDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
 };
 
 // Can be chained in InstanceDescriptor
@@ -1149,18 +1201,18 @@ pub const DawnAdapterPropertiesPowerPreference = extern struct {
 
 pub const DeviceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     required_features_count: usize = 0,
     required_features: ?[*]const FeatureName = null,
     required_limits: ?[*]const RequiredLimits = null,
     default_queue: QueueDescriptor = .{},
-    device_lost_callback: ?DeviceLostCallback = null,
-    device_lost_user_data: ?*anyopaque = null,
+    device_lost_callback_info: DeviceLostCallbackInfo = .{},
+    uncaptured_error_callback_info: UncapturedErrorCallbackInfo = .{},
 };
 
 pub const SurfaceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
 };
 
 pub const RequestAdapterOptions = extern struct {
@@ -1360,15 +1412,25 @@ pub const LoggingCallback = *const fn (
 ) callconv(.C) void;
 
 pub const DeviceLostCallback = *const fn (
+    device: *const Device,
     reason: DeviceLostReason,
-    message: ?[*:0]const u8,
-    userdata: ?*anyopaque,
+    message: StringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
+) callconv(.C) void;
+
+pub const UncapturedErrorCallback = *const fn (
+    device: *const Device,
+    err_type: ErrorType,
+    message: StringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const RequestAdapterCallback = *const fn (
     status: RequestAdapterStatus,
     adapter: Adapter,
-    message: ?[*:0]const u8,
+    message: StringView,
     userdata_1: ?*anyopaque,
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
@@ -1376,8 +1438,9 @@ pub const RequestAdapterCallback = *const fn (
 pub const RequestDeviceCallback = *const fn (
     status: RequestDeviceStatus,
     device: Device,
-    message: ?[*:0]const u8,
-    userdata: ?*anyopaque,
+    message: StringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const BufferMapCallback = *const fn (
@@ -1397,11 +1460,6 @@ pub const CompilationInfoCallback = *const fn (
 ) callconv(.C) void;
 
 pub const Adapter = *opaque {
-    pub fn createDevice(adapter: Adapter, descriptor: DeviceDescriptor) Device {
-        return wgpuAdapterCreateDevice(adapter, &descriptor);
-    }
-    extern fn wgpuAdapterCreateDevice(adapter: Adapter, descriptor: *const DeviceDescriptor) Device;
-
     pub fn getFeatures(adapter: Adapter, features: *SupportedFeatures) void {
         wgpuAdapterGetFeatures(adapter, features);
     }
@@ -1425,17 +1483,11 @@ pub const Adapter = *opaque {
     pub fn requestDevice(
         adapter: Adapter,
         descriptor: DeviceDescriptor,
-        callback: RequestDeviceCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        wgpuAdapterRequestDevice(adapter, &descriptor, callback, userdata);
+        callback_info: RequestDeviceCallbackInfo,
+    ) Future {
+        return wgpuAdapterRequestDevice(adapter, &descriptor, callback_info);
     }
-    extern fn wgpuAdapterRequestDevice(
-        adapter: Adapter,
-        descriptor: *const DeviceDescriptor,
-        callback: RequestDeviceCallback,
-        userdata: ?*anyopaque,
-    ) void;
+    extern fn wgpuAdapterRequestDevice(Adapter, *const DeviceDescriptor, RequestDeviceCallbackInfo) Future;
 
     pub fn addRef(adapter: Adapter) void {
         wgpuAdapterAddRef(adapter);

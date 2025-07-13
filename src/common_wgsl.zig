@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn csGenerateMipmaps(allocator: std.mem.Allocator, format: []const u8) [:0]const u8 {
+pub fn csGenerateMipmaps(allocator: std.mem.Allocator, format: []const u8) []const u8 {
     const s0 = std.fmt.allocPrint(
         allocator,
         \\  @group(0) @binding(2) var dst_mipmap1: texture_storage_2d<{s}, write>;
@@ -11,7 +11,7 @@ pub fn csGenerateMipmaps(allocator: std.mem.Allocator, format: []const u8) [:0]c
         .{ format, format, format, format },
     ) catch unreachable;
     defer allocator.free(s0);
-    return std.mem.joinZ(allocator, "\n\n", &.{ s0, cs_generate_mipmaps }) catch unreachable;
+    return std.mem.join(allocator, "\n\n", &.{ s0, cs_generate_mipmaps }) catch unreachable;
 }
 
 // zig fmt: off

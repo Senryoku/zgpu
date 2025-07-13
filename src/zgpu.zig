@@ -12,7 +12,7 @@ const wgsl = @import("common_wgsl.zig");
 const zgpu_options = @import("zgpu_options");
 pub const wgpu = @import("wgpu.zig");
 pub const slog = std.log.scoped(.zgpu); // scoped log that can be comptime processed in main logger
-const emscripten = @import("builtin").target.os.tag == .emscripten;
+// const emscripten = @import("builtin").target.os.tag == .emscripten;
 
 test {
     _ = wgpu;
@@ -129,7 +129,7 @@ pub const GraphicsContext = struct {
 
         const adapter = adapter: {
             const Response = struct {
-                status: wgpu.RequestAdapterStatus = .success,
+                status: wgpu.RequestAdapterStatus = .err,
                 adapter: wgpu.Adapter = undefined,
             };
 
@@ -137,13 +137,12 @@ pub const GraphicsContext = struct {
                 fn callback(
                     status: wgpu.RequestAdapterStatus,
                     adapter: wgpu.Adapter,
-                    message: ?[*:0]const u8,
+                    message: wgpu.StringView,
                     userdata_1: ?*anyopaque,
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
                     _ = userdata_2;
-                    std.debug.print("\n\nCALLBACK\n\n", .{});
-                    if (message) |msg| std.debug.print("MESSAGE: {s}\n", .{msg});
+                    if (status != .success) std.log.err("Adapter: {s}", .{message.zigStr() orelse "no message"});
                     const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.adapter = adapter;
@@ -153,7 +152,6 @@ pub const GraphicsContext = struct {
             const adapter_options = wgpu.RequestAdapterOptions{
                 .feature_level = .core,
                 .power_preference = .high_performance,
-                // .backend_type = .d3d12,
             };
 
             var response = Response{};
@@ -170,17 +168,17 @@ pub const GraphicsContext = struct {
             };
             const adapter_wait_status = instance.waitAny(&futures, 0);
             if (adapter_wait_status != .success) {
-                std.log.err("GPU adapter request timed out.", .{});
-                // return error.NoGraphicsAdapter;
+                std.log.err("Failed to wait for GPU adapter request (status: {s}).", .{@tagName(adapter_wait_status)});
+                return error.NoGraphicsAdapter;
             }
 
-            if (emscripten) {
-                // wait for response. requires emscripten `-sASYNC` flag
-                // otherwise whole api would need to be changed in a way that allows whole program to return from main and wait to js to call back
-                std.log.debug("wait for instance.requestAdapter...", .{});
-                while (response.status == .unknown) emscripten_sleep(5);
-                std.log.debug("{}", .{response.status});
-            }
+            // if (emscripten) {
+            //     // wait for response. requires emscripten `-sASYNC` flag
+            //     // otherwise whole api would need to be changed in a way that allows whole program to return from main and wait to js to call back
+            //     std.log.debug("wait for instance.requestAdapter...", .{});
+            //     while (response.status == .unknown) emscripten_sleep(5);
+            //     std.log.debug("{}", .{response.status});
+            // }
 
             if (response.status != .success) {
                 std.log.err("Failed to request GPU adapter (status: {s}).", .{@tagName(response.status)});
@@ -200,66 +198,125 @@ pub const GraphicsContext = struct {
         //     properties.backend_type = .undef;
         // }
         std.log.info("[zgpu] High-performance device has been selected:", .{});
-        std.log.info("[zgpu]   Device: {s}", .{adapter_info.device.?});
-        // std.log.info("[zgpu]   Description: {s}", .{adapter_info.description.?});
-        // std.log.info("[zgpu]   Adapter type: {s}", .{@tagName(adapter_info.adapter_type)});
-        // std.log.info("[zgpu]   Backend type: {s}", .{@tagName(adapter_info.backend_type)});
+        std.log.info("[zgpu]   Device: {s}", .{ adapter_info.device.zigStr() orelse "no info" });
+        std.log.info("[zgpu]   Driver: {s}", .{ adapter_info.description.zigStr() orelse "no info" });
+        std.log.info("[zgpu]   Adapter type: {s}", .{ @tagName(adapter_info.adapter_type) });
+        std.log.info("[zgpu]   Backend type: {s}", .{ @tagName(adapter_info.backend_type) });
 
         const device = device: {
             const Response = struct {
-                status: wgpu.RequestDeviceStatus = .unknown,
+                status: wgpu.RequestDeviceStatus = .err,
                 device: wgpu.Device = undefined,
             };
 
-            const callback = (struct {
+            const request_callback = (struct {
                 fn callback(
                     status: wgpu.RequestDeviceStatus,
                     device: wgpu.Device,
-                    message: ?[*:0]const u8,
-                    userdata: ?*anyopaque,
+                    message: wgpu.StringView,
+                    userdata_1: ?*anyopaque,
+                    userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
-                    _ = message;
-                    const response = @as(*Response, @ptrCast(@alignCast(userdata)));
+                    _ = userdata_2;
+                    if (status != .success) std.log.err("Device: {s}", .{message.zigStr() orelse "no message"});
+                    const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.device = device;
                 }
             }).callback;
 
-            var toggles: [2][*:0]const u8 = undefined;
-            var num_toggles: usize = 0;
-            if (zgpu_options.dawn_skip_validation) {
-                toggles[num_toggles] = "skip_validation";
-                num_toggles += 1;
-            }
-            if (zgpu_options.dawn_allow_unsafe_apis) {
-                toggles[num_toggles] = "allow_unsafe_apis";
-                num_toggles += 1;
-            }
-            const dawn_toggles = wgpu.DawnTogglesDescriptor{
-                .chain = .{ .next = null, .struct_type = .dawn_toggles_descriptor },
-                .enabled_toggles_count = num_toggles,
-                .enabled_toggles = &toggles,
+            const device_lost_callback = (struct {
+                fn callback(
+                    device: *const wgpu.Device,
+                    reason: wgpu.DeviceLostReason,
+                    message: wgpu.StringView,
+                    userdata_1: ?*anyopaque,
+                    userdata_2: ?*anyopaque,
+                ) callconv(.C) void {
+                    _ = device;
+                    _ = userdata_1;
+                    _ = userdata_2;
+                    std.log.err("Device lost:\n\tReason: {s}\n\tMessage: {s}", .{
+                        @tagName(reason),
+                        message.zigStr() orelse "no message"
+                    });
+                }
+            }).callback;
+
+            const uncaptured_error_callback = (struct {
+                fn callback(
+                    device: *const wgpu.Device,
+                    err_type: wgpu.ErrorType,
+                    message: wgpu.StringView,
+                    userdata_1: ?*anyopaque,
+                    userdata_2: ?*anyopaque,
+                ) callconv(.C) void {
+                    _ = device;
+                    _ = userdata_1;
+                    _ = userdata_2;
+                    std.log.err("Uncaptured Error:\n\tError Type: {s}\n\tMessage: {s}", .{
+                        @tagName(err_type),
+                        message.zigStr() orelse "no message"
+                    });
+                }
+            }).callback;
+
+            // var toggles: [2][*:0]const u8 = undefined;
+            // var num_toggles: usize = 0;
+            // if (zgpu_options.dawn_skip_validation) {
+            //     toggles[num_toggles] = "skip_validation";
+            //     num_toggles += 1;
+            // }
+            // if (zgpu_options.dawn_allow_unsafe_apis) {
+            //     toggles[num_toggles] = "allow_unsafe_apis";
+            //     num_toggles += 1;
+            // }
+            // const dawn_toggles = wgpu.DawnTogglesDescriptor{
+            //     .chain = .{ .next = null, .struct_type = .dawn_toggles_descriptor },
+            //     .enabled_toggles_count = num_toggles,
+            //     .enabled_toggles = &toggles,
+            // };
+
+            const device_descriptor = wgpu.DeviceDescriptor{
+                // .next_in_chain = @ptrCast(&dawn_toggles),
+                .required_features_count = options.required_features.len,
+                .required_features = options.required_features.ptr,
+                .required_limits = @ptrCast(options.required_limits),
+                .device_lost_callback_info = .{
+                    .mode = .allow_spontaneous,
+                    .callback = device_lost_callback,
+                },
+                .uncaptured_error_callback_info = .{
+                    .callback = uncaptured_error_callback,
+                },
             };
 
             var response = Response{};
-            adapter.requestDevice(
-                wgpu.DeviceDescriptor{
-                    .next_in_chain = @ptrCast(&dawn_toggles),
-                    .required_features_count = options.required_features.len,
-                    .required_features = options.required_features.ptr,
-                    .required_limits = @ptrCast(options.required_limits),
-                },
-                callback,
-                @ptrCast(&response),
-            );
+            const callback_info = wgpu.RequestDeviceCallbackInfo{
+                .mode = .wait_any_only,
+                .callback = request_callback,
+                .userdata_1 = @ptrCast(&response),
+                .userdata_2 = null,
+            };
 
-            if (emscripten) {
-                // wait for response. requires emscripten `-sASYNC` flag
-                // otherwise whole api would need to be changed in a way that allows whole program to return from main and wait to js to call back
-                std.log.debug("wait for adapter.requestDevice...", .{});
-                while (response.status == .unknown) emscripten_sleep(5);
-                std.log.debug("{}", .{response.status});
+            var futures = [_]wgpu.FutureWaitInfo{
+                .{
+                    .future = adapter.requestDevice(device_descriptor, callback_info),
+                },
+            };
+            const device_wait_status = instance.waitAny(&futures, 0);
+            if (device_wait_status != .success) {
+                std.log.err("Failed to wait for GPU device request (status: {s}).", .{@tagName(device_wait_status)});
+                return error.NoGraphicsDevice;
             }
+
+            // if (emscripten) {
+            //     // wait for response. requires emscripten `-sASYNC` flag
+            //     // otherwise whole api would need to be changed in a way that allows whole program to return from main and wait to js to call back
+            //     std.log.debug("wait for adapter.requestDevice...", .{});
+            //     while (response.status == .unknown) emscripten_sleep(5);
+            //     std.log.debug("{}", .{response.status});
+            // }
 
             if (response.status != .success) {
                 std.log.err("Failed to request GPU device (status: {s}).", .{@tagName(response.status)});
@@ -569,18 +626,19 @@ pub const GraphicsContext = struct {
     }
 
     pub fn canRender(gctx: *GraphicsContext) bool {
-        if (emscripten) {
-            if (gctx.uniforms.stage.buffers[gctx.uniforms.stage.current].slice == null) {
-                var i: u32 = 0;
-                while (i < gctx.uniforms.stage.num) : (i += 1) {
-                    if (gctx.uniforms.stage.buffers[i].slice != null) {
-                        gctx.uniforms.stage.current = i;
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
+        // if (emscripten) {
+        //     if (gctx.uniforms.stage.buffers[gctx.uniforms.stage.current].slice == null) {
+        //         var i: u32 = 0;
+        //         while (i < gctx.uniforms.stage.num) : (i += 1) {
+        //             if (gctx.uniforms.stage.buffers[i].slice != null) {
+        //                 gctx.uniforms.stage.current = i;
+        //                 return true;
+        //             }
+        //         }
+        //         return false;
+        //     }
+        // }
+        _ = gctx;
         return true;
     }
 
@@ -615,7 +673,8 @@ pub const GraphicsContext = struct {
         const texture = gctx.lookupResource(texture_handle).?;
         const info = gctx.lookupResourceInfo(texture_handle).?;
         var dim = descriptor.dimension;
-        if (!emscripten and dim == .undef) {
+        // if (!emscripten and dim == .undef) {
+        if (dim == .undef) {
             dim = switch (info.dimension) {
                 .tdim_1d => .tvdim_1d,
                 .tdim_2d => .tvdim_2d,
@@ -1170,7 +1229,7 @@ pub const GraphicsContext = struct {
 // Defined in Dawn codebase
 // extern fn dawnProcSetProcs(procs: DawnProcsTable) void;
 
-extern fn emscripten_sleep(ms: u32) void;
+// extern fn emscripten_sleep(ms: u32) void;
 
 /// Helper to create a buffer BindGroupLayoutEntry.
 pub fn bufferEntry(
@@ -1255,8 +1314,8 @@ pub fn createRenderPipelineSimple(
     allocator: std.mem.Allocator,
     gctx: *GraphicsContext,
     bgls: []const BindGroupLayoutHandle,
-    wgsl_vs: [:0]const u8,
-    wgsl_fs: [:0]const u8,
+    wgsl_vs: []const u8,
+    wgsl_fs: []const u8,
     vertex_stride: ?u64,
     vertex_attribs: ?[]const wgpu.VertexAttribute,
     primitive_state: wgpu.PrimitiveState,
@@ -1350,16 +1409,16 @@ pub fn endReleasePass(pass: anytype) void {
 
 pub fn createWgslShaderModule(
     device: wgpu.Device,
-    source: [*:0]const u8,
-    label: ?[*:0]const u8,
+    source: []const u8,
+    label: ?[]const u8,
 ) wgpu.ShaderModule {
-    const wgsl_desc = wgpu.ShaderModuleWGSLDescriptor{
-        .chain = .{ .next = null, .struct_type = .shader_module_wgsl_descriptor },
-        .code = source,
+    const wgsl_source = wgpu.ShaderSourceWGSL{
+        .chain = .{ .next = null, .struct_type = .shader_source_wgsl },
+        .code = wgpu.StringView.fromZigStr(source),
     };
     const desc = wgpu.ShaderModuleDescriptor{
-        .next_in_chain = @ptrCast(&wgsl_desc),
-        .label = if (label) |l| l else null,
+        .next_in_chain = @ptrCast(&wgsl_source),
+        .label = if (label) |l| wgpu.StringView.fromZigStr(l) else .{},
     };
     return device.createShaderModule(desc);
 }
@@ -1642,33 +1701,33 @@ const SurfaceDescriptorTag = enum {
     windows_hwnd,
     xlib,
     wayland,
-    canvas_html,
+    // canvas_html,
 };
 
 const SurfaceDescriptor = union(SurfaceDescriptorTag) {
     metal_layer: struct {
-        label: ?[*:0]const u8 = null,
+        label: []const u8,
         layer: *anyopaque,
     },
     windows_hwnd: struct {
-        label: ?[*:0]const u8 = null,
+        label: []const u8,
         hinstance: *anyopaque,
         hwnd: *anyopaque,
     },
     xlib: struct {
-        label: ?[*:0]const u8 = null,
+        label: []const u8,
         display: *anyopaque,
         window: u32,
     },
     wayland: struct {
-        label: ?[*:0]const u8 = null,
+        label: []const u8,
         display: *anyopaque,
         surface: *anyopaque,
     },
-    canvas_html: struct {
-        label: ?[*:0]const u8 = null,
-        selector: [*:0]const u8,
-    },
+    // canvas_html: struct {
+    //     label: []const u8,
+    //     selector: [*:0]const u8,
+    // },
 };
 
 fn isLinuxDesktopLike(tag: std.Target.Os.Tag) bool {
@@ -1714,12 +1773,12 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
                 },
             };
         },
-        .emscripten => SurfaceDescriptor{
-            .canvas_html = .{
-                .label = "basic surface",
-                .selector = "#canvas", // TODO: can this be somehow exposed through api?
-            },
-        },
+        // .emscripten => SurfaceDescriptor{
+        //     .canvas_html = .{
+        //         .label = "basic surface",
+        //         .selector = "#canvas", // TODO: can this be somehow exposed through api?
+        //     },
+        // },
         else => if (isLinuxDesktopLike(os_tag)) linux: {
             if (window_provider.getWaylandDisplay()) |wl_display| {
                 break :linux SurfaceDescriptor{
@@ -1743,58 +1802,58 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
 
     return switch (descriptor) {
         .metal_layer => |src| blk: {
-            var desc: wgpu.SurfaceDescriptorFromMetalLayer = undefined;
+            var desc: wgpu.SurfaceSourceMetalLayer = undefined;
             desc.chain.next = null;
-            desc.chain.struct_type = .surface_descriptor_from_metal_layer;
+            desc.chain.struct_type = .surface_source_metal_layer;
             desc.layer = src.layer;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = if (src.label) |l| l else null,
+                .label = wgpu.StringView.fromZigStr(src.label),
             });
         },
         .windows_hwnd => |src| blk: {
-            var desc: wgpu.SurfaceDescriptorFromWindowsHWND = undefined;
+            var desc: wgpu.SurfaceSourceWindowsHWND = undefined;
             desc.chain.next = null;
-            desc.chain.struct_type = .surface_descriptor_from_windows_hwnd;
+            desc.chain.struct_type = .surface_source_windows_hwnd;
             desc.hinstance = src.hinstance;
             desc.hwnd = src.hwnd;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = if (src.label) |l| l else null,
+                .label = wgpu.StringView.fromZigStr(src.label),
             });
         },
         .xlib => |src| blk: {
-            var desc: wgpu.SurfaceDescriptorFromXlibWindow = undefined;
+            var desc: wgpu.SurfaceSourceXlibWindow = undefined;
             desc.chain.next = null;
-            desc.chain.struct_type = .surface_descriptor_from_xlib_window;
+            desc.chain.struct_type = .surface_source_xlib_window;
             desc.display = src.display;
             desc.window = src.window;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = if (src.label) |l| l else null,
+                .label = wgpu.StringView.fromZigStr(src.label),
             });
         },
         .wayland => |src| blk: {
-            var desc: wgpu.SurfaceDescriptorFromWaylandSurface = undefined;
+            var desc: wgpu.SurfaceSourceWaylandSurface = undefined;
             desc.chain.next = null;
-            desc.chain.struct_type = .surface_descriptor_from_wayland_surface;
+            desc.chain.struct_type = .surface_source_wayland_surface;
             desc.display = src.display;
             desc.surface = src.surface;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = if (src.label) |l| l else null,
+                .label = wgpu.StringView.fromZigStr(src.label),
             });
         },
-        .canvas_html => |src| blk: {
-            var desc: wgpu.SurfaceDescriptorFromCanvasHTMLSelector = .{
-                .chain = .{ .struct_type = .surface_descriptor_from_canvas_html_selector, .next = null },
-                .selector = src.selector,
-            };
-            break :blk instance.createSurface(.{
-                .next_in_chain = @as(*const wgpu.ChainedStruct, @ptrCast(&desc)),
-                .label = if (src.label) |l| l else null,
-            });
-        },
+        // .canvas_html => |src| blk: {
+        //     var desc: wgpu.SurfaceSourceCanvasHTMLSelector = .{
+        //         .chain = .{ .struct_type = .surface_source_canvas_html_selector, .next = null },
+        //         .selector = src.selector,
+        //     };
+        //     break :blk instance.createSurface(.{
+        //         .next_in_chain = @as(*const wgpu.ChainedStruct, @ptrCast(&desc)),
+        //         .label = if (src.label) |l| l else null,
+        //     });
+        // },
     };
 }
 
@@ -1904,14 +1963,14 @@ fn formatToShaderFormat(format: wgpu.TextureFormat) []const u8 {
     };
 }
 
-usingnamespace if (emscripten) struct {
-    // Missing symbols
-    var wgpuDeviceTickWarnPrinted: bool = false;
-    pub export fn wgpuDeviceTick() void {
-        if (!wgpuDeviceTickWarnPrinted) {
-            std.log.warn("wgpuDeviceTick(): this fn should be avoided! RequestAnimationFrame() is advised for smooth rendering in browser.", .{});
-            wgpuDeviceTickWarnPrinted = true;
-        }
-        emscripten_sleep(1);
-    }
-} else struct {};
+// usingnamespace if (emscripten) struct {
+//     // Missing symbols
+//     var wgpuDeviceTickWarnPrinted: bool = false;
+//     pub export fn wgpuDeviceTick() void {
+//         if (!wgpuDeviceTickWarnPrinted) {
+//             std.log.warn("wgpuDeviceTick(): this fn should be avoided! RequestAnimationFrame() is advised for smooth rendering in browser.", .{});
+//             wgpuDeviceTickWarnPrinted = true;
+//         }
+//         emscripten_sleep(1);
+//     }
+// } else struct {};
