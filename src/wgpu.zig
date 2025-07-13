@@ -37,7 +37,26 @@ test "extern struct ABI compatibility" {
     }
 }
 
+pub const Status = enum(u32) {
+    success = 0x00000001,
+    err = 0x00000002,
+};
+
+pub const WaitStatus = enum(u32) {
+    success = 0x00000001,
+    timed_out = 0x00000002,
+    err = 0x00000003,
+};
+
+pub const CallbackMode = enum(u32) {
+    undef = 0x00000000,
+    wait_any_only = 0x00000001,
+    allow_process_events = 0x00000002,
+    allow_spontaneous = 0x00000003,
+};
+
 pub const AdapterType = enum(u32) {
+    undef = 0x00000000,
     discrete_gpu,
     integrated_gpu,
     cpu,
@@ -59,7 +78,7 @@ pub const CompositeAlphaMode = enum(u32) {
 };
 
 pub const BackendType = enum(u32) {
-    undef,
+    undef = 0x00000000,
     nul,
     webgpu,
     d3d11,
@@ -226,6 +245,12 @@ pub const ErrorType = enum(u32) {
     device_lost = 0x00000005,
 };
 
+pub const FeatureLevel = enum(u32) {
+    undef = 0x00000000,
+    compatibility = 0x00000001,
+    core = 0x00000002,
+};
+
 pub const FeatureName = enum(u32) {
     undef = 0x00000000,
     depth_clip_control = 0x00000001,
@@ -346,10 +371,10 @@ pub const RenderPassTimestampLocation = enum(u32) {
 };
 
 pub const RequestAdapterStatus = enum(u32) {
-    success = 0x00000000,
-    unavailable = 0x00000001,
-    err = 0x00000002,
-    unknown = 0x00000003,
+    success = 0x00000001,
+    callback_cancelled = 0x00000002,
+    unavailable = 0x00000003,
+    err = 0x00000004,
 };
 
 pub const RequestDeviceStatus = enum(u32) {
@@ -698,6 +723,15 @@ pub const TextureUsage = packed struct(u32) {
     _padding: u26 = 0,
 };
 
+pub const Future = extern struct {
+    id: u64 = 0,
+};
+
+pub const FutureWaitInfo = extern struct {
+    future: Future = .{},
+    completed: bool = false,
+};
+
 pub const ChainedStruct = extern struct {
     next: ?*const ChainedStruct,
     struct_type: StructType,
@@ -708,17 +742,26 @@ pub const ChainedStructOut = extern struct {
     struct_type: StructType,
 };
 
-pub const AdapterProperties = extern struct {
-    next_in_chain: ?*ChainedStructOut = null,
-    vendor_id: u32,
-    vendor_name: [*:0]const u8,
-    architecture: [*:0]const u8,
-    device_id: u32,
-    name: [*:0]const u8,
-    driver_description: [*:0]const u8,
-    adapter_type: AdapterType,
-    backend_type: BackendType,
-    compatibility_mode: bool,
+pub const AdapterInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    vendor_name: ?[*:0]const u8 = null,
+    architecture: ?[*:0]const u8 = null,
+    device: ?[*:0]const u8 = null,
+    description: ?[*:0]const u8 = null,
+    backend_type: BackendType = .undef,
+    adapter_type: AdapterType = .unknown,
+    vendor_id: u32 = 0,
+    device_id: u32 = 0,
+    subgroup_min_size: u32 = 0,
+    subgroup_max_size: u32 = 0,
+};
+
+pub const RequestAdapterCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undef,
+    callback: ?RequestAdapterCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
 };
 
 pub const SupportedFeatures = extern struct {
@@ -1122,11 +1165,11 @@ pub const SurfaceDescriptor = extern struct {
 
 pub const RequestAdapterOptions = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    compatible_surface: ?Surface = null,
-    power_preference: PowerPreference,
-    backend_type: BackendType = .undef,
+    feature_level: FeatureLevel = .undef,
+    power_preference: PowerPreference = .undef,
     force_fallback_adapter: bool = false,
-    compatibility_mode: bool = false,
+    backend_type: BackendType = .undef,
+    compatible_surface: ?Surface = null,
 };
 
 pub const ComputePassTimestampWrite = extern struct {
@@ -1326,7 +1369,8 @@ pub const RequestAdapterCallback = *const fn (
     status: RequestAdapterStatus,
     adapter: Adapter,
     message: ?[*:0]const u8,
-    userdata: ?*anyopaque,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const RequestDeviceCallback = *const fn (
@@ -1368,10 +1412,10 @@ pub const Adapter = *opaque {
     }
     extern fn wgpuAdapterGetLimits(adapter: Adapter, limits: *SupportedLimits) bool;
 
-    pub fn getProperties(adapter: Adapter, properties: *AdapterProperties) void {
-        wgpuAdapterGetProperties(adapter, properties);
+    pub fn getInfo(adapter: Adapter, properties: *AdapterInfo) void {
+        wgpuAdapterGetInfo(adapter, properties);
     }
-    extern fn wgpuAdapterGetProperties(adapter: Adapter, properties: *AdapterProperties) void;
+    extern fn wgpuAdapterGetInfo(adapter: Adapter, properties: *AdapterInfo) void;
 
     pub fn hasFeature(adapter: Adapter, feature: FeatureName) bool {
         return wgpuAdapterHasFeature(adapter, feature);
@@ -2142,17 +2186,20 @@ pub const Instance = *opaque {
     pub fn requestAdapter(
         instance: Instance,
         options: RequestAdapterOptions,
-        callback: RequestAdapterCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        wgpuInstanceRequestAdapter(instance, &options, callback, userdata);
+        callback_info: RequestAdapterCallbackInfo,
+    ) Future {
+        return wgpuInstanceRequestAdapter(instance, &options, callback_info);
     }
     extern fn wgpuInstanceRequestAdapter(
         instance: Instance,
         options: *const RequestAdapterOptions,
-        callback: RequestAdapterCallback,
-        userdata: ?*anyopaque,
-    ) void;
+        callback_info: RequestAdapterCallbackInfo,
+    ) Future;
+
+    pub fn waitAny(instance: Instance, futures: []FutureWaitInfo, timeout_ns: u64) WaitStatus {
+        return wgpuInstanceWaitAny(instance, futures.len, futures.ptr, timeout_ns);
+    }
+    extern fn wgpuInstanceWaitAny(Instance, usize, ?[*]FutureWaitInfo, u64) WaitStatus;
 
     pub fn addRef(instance: Instance) void {
         wgpuInstanceAddRef(instance);
@@ -2892,14 +2939,14 @@ pub const Surface = *opaque {
     extern fn wgpuSurfaceConfigure(surface: Surface, config: *const SurfaceConfiguration) void;
 
     pub fn getCurrentTexture(surface: Surface, surface_texture: *SurfaceTexture) void {
-        return wgpuSurfaceGetCurrentTexture(surface, surface_texture);
+        wgpuSurfaceGetCurrentTexture(surface, surface_texture);
     }
     extern fn wgpuSurfaceGetCurrentTexture(Surface, *SurfaceTexture) void;
 
-    pub fn present(surface: Surface) void {
-        wgpuSurfacePresent(surface);
+    pub fn present(surface: Surface) Status {
+        return wgpuSurfacePresent(surface);
     }
-    extern fn wgpuSurfacePresent(surface: Surface) void;
+    extern fn wgpuSurfacePresent(surface: Surface) Status;
 
     pub fn addRef(surface: Surface) void {
         wgpuSurfaceAddRef(surface);
@@ -2927,6 +2974,16 @@ pub const Texture = *opaque {
         wgpuTextureSetLabel(texture, label);
     }
     extern fn wgpuTextureSetLabel(texture: Texture, label: ?[*:0]const u8) void;
+
+    pub fn getWidth(texture: Texture) u32 {
+        return wgpuTextureGetWidth(texture);
+    }
+    extern fn wgpuTextureGetWidth(Texture) u32;
+
+    pub fn getHeight(texture: Texture) u32 {
+        return wgpuTextureGetHeight(texture);
+    }
+    extern fn wgpuTextureGetHeight(Texture) u32;
 
     pub fn addRef(texture: Texture) void {
         wgpuTextureAddRef(texture);

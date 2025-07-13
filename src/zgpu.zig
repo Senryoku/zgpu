@@ -129,7 +129,7 @@ pub const GraphicsContext = struct {
 
         const adapter = adapter: {
             const Response = struct {
-                status: wgpu.RequestAdapterStatus = .unknown,
+                status: wgpu.RequestAdapterStatus = .success,
                 adapter: wgpu.Adapter = undefined,
             };
 
@@ -138,21 +138,41 @@ pub const GraphicsContext = struct {
                     status: wgpu.RequestAdapterStatus,
                     adapter: wgpu.Adapter,
                     message: ?[*:0]const u8,
-                    userdata: ?*anyopaque,
+                    userdata_1: ?*anyopaque,
+                    userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
-                    _ = message;
-                    const response = @as(*Response, @ptrCast(@alignCast(userdata)));
+                    _ = userdata_2;
+                    std.debug.print("\n\nCALLBACK\n\n", .{});
+                    if (message) |msg| std.debug.print("MESSAGE: {s}\n", .{msg});
+                    const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.adapter = adapter;
                 }
             }).callback;
 
+            const adapter_options = wgpu.RequestAdapterOptions{
+                .feature_level = .core,
+                .power_preference = .high_performance,
+                // .backend_type = .d3d12,
+            };
+
             var response = Response{};
-            instance.requestAdapter(
-                .{ .power_preference = .high_performance },
-                callback,
-                @ptrCast(&response),
-            );
+            const callback_info = wgpu.RequestAdapterCallbackInfo{
+                .mode = .wait_any_only,
+                .callback = callback,
+                .userdata_1 = @ptrCast(&response),
+            };
+
+            var futures = [_]wgpu.FutureWaitInfo{
+                .{
+                    .future = instance.requestAdapter(adapter_options, callback_info),
+                },
+            };
+            const adapter_wait_status = instance.waitAny(&futures, 0);
+            if (adapter_wait_status != .success) {
+                std.log.err("GPU adapter request timed out.", .{});
+                // return error.NoGraphicsAdapter;
+            }
 
             if (emscripten) {
                 // wait for response. requires emscripten `-sASYNC` flag
@@ -170,21 +190,20 @@ pub const GraphicsContext = struct {
         };
         errdefer adapter.release();
 
-        var properties: wgpu.AdapterProperties = undefined;
-        properties.next_in_chain = null;
-        adapter.getProperties(&properties);
+        var adapter_info = wgpu.AdapterInfo{};
+        adapter.getInfo(&adapter_info);
 
-        if (emscripten) {
-            properties.name = "emscripten";
-            properties.driver_description = "emscripten";
-            properties.adapter_type = .unknown;
-            properties.backend_type = .undef;
-        }
+        // if (emscripten) {
+        //     properties.name = "emscripten";
+        //     properties.driver_description = "emscripten";
+        //     properties.adapter_type = .unknown;
+        //     properties.backend_type = .undef;
+        // }
         std.log.info("[zgpu] High-performance device has been selected:", .{});
-        std.log.info("[zgpu]   Name: {s}", .{properties.name});
-        std.log.info("[zgpu]   Driver: {s}", .{properties.driver_description});
-        std.log.info("[zgpu]   Adapter type: {s}", .{@tagName(properties.adapter_type)});
-        std.log.info("[zgpu]   Backend type: {s}", .{@tagName(properties.backend_type)});
+        std.log.info("[zgpu]   Device: {s}", .{adapter_info.device.?});
+        // std.log.info("[zgpu]   Description: {s}", .{adapter_info.description.?});
+        // std.log.info("[zgpu]   Adapter type: {s}", .{@tagName(adapter_info.adapter_type)});
+        // std.log.info("[zgpu]   Backend type: {s}", .{@tagName(adapter_info.backend_type)});
 
         const device = device: {
             const Response = struct {
@@ -250,7 +269,8 @@ pub const GraphicsContext = struct {
         };
         errdefer device.release();
 
-        device.setUncapturedErrorCallback(logUnhandledError, null);
+        // TODO: The entire callback structure for WebGPU is different now, redo all of this.
+        // device.setUncapturedErrorCallback(logUnhandledError, null);
 
         const surface = createSurfaceForWindow(instance, window_provider);
         errdefer surface.release();
@@ -271,6 +291,7 @@ pub const GraphicsContext = struct {
             .window_provider = window_provider,
             // .native_instance = if (emscripten) null else native_instance,
             .instance = instance,
+            .adapter = adapter,
             .device = device,
             .queue = device.getQueue(),
             .surface = surface,
@@ -321,6 +342,7 @@ pub const GraphicsContext = struct {
         gctx.surface.release();
         gctx.queue.release();
         gctx.device.release();
+        gctx.adapter.release();
         // if (!emscripten) dniDestroy(gctx.native_instance);
         allocator.destroy(gctx);
     }
@@ -489,30 +511,61 @@ pub const GraphicsContext = struct {
 
     pub fn present(gctx: *GraphicsContext) enum {
         normal_execution,
-        swap_chain_resized,
+        surface_reconfigured,
     } {
-        if (!emscripten) gctx.swapchain.present();
+        // if (!emscripten) gctx.surface.present();
+        const status = gctx.surface.present();
 
-        const fb_size = gctx.window_provider.getFramebufferSize();
-        if (gctx.swapchain_descriptor.width != fb_size[0] or
-            gctx.swapchain_descriptor.height != fb_size[1])
-        {
-            if (fb_size[0] != 0 and fb_size[1] != 0) {
-                gctx.swapchain_descriptor.width = @intCast(fb_size[0]);
-                gctx.swapchain_descriptor.height = @intCast(fb_size[1]);
-                gctx.swapchain.release();
+        var maybe_surface_tex = wgpu.SurfaceTexture{};
+        gctx.surface.getCurrentTexture(&maybe_surface_tex);
 
-                gctx.swapchain = gctx.device.createSwapChain(gctx.surface, gctx.swapchain_descriptor);
+        if (status == .success and maybe_surface_tex.status == .success_optimal) return .normal_execution;
 
-                std.log.info(
-                    "[zgpu] Window has been resized to: {d}x{d}.",
-                    .{ gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height },
-                );
-                return .swap_chain_resized;
-            }
-        }
+        // reconfigure surface if in any state other than .optimal
+        // TODO: This may need more careful handling if it's caused by anything other than a resize
+        const framebuffer_size = gctx.window_provider.getFramebufferSize();
+        const surface_configuration = wgpu.SurfaceConfiguration{
+            .device = gctx.device,
+            .format = surface_texture_format,
+            .usage = .{ .render_attachment = true },
+            .width = @intCast(framebuffer_size[0]),
+            .height = @intCast(framebuffer_size[1]),
+        };
+        gctx.surface.configure(surface_configuration);
 
-        return .normal_execution;
+        std.log.info(
+            "[zgpu] Surface has been reconfigured with size: {d}x{d}.",
+            .{ framebuffer_size[0], framebuffer_size[1] },
+        );
+        return .surface_reconfigured;
+
+
+        // // something isn't right with the surface, could be resize, could be something else
+        // const surface_tex = maybe_surface_tex.texture orelse return .surface_fatal;
+        // w.cur_res_x = surface_tex.getWidth();
+        // w.cur_res_y = surface_tex.getHeight();
+        //
+        // const fb_size = gctx.window_provider.getFramebufferSize();
+        //
+        // if (gctx.swapchain_descriptor.width != fb_size[0] or
+        //     gctx.swapchain_descriptor.height != fb_size[1])
+        // {
+        //     if (fb_size[0] != 0 and fb_size[1] != 0) {
+        //         gctx.swapchain_descriptor.width = @intCast(fb_size[0]);
+        //         gctx.swapchain_descriptor.height = @intCast(fb_size[1]);
+        //         gctx.swapchain.release();
+        //
+        //         gctx.swapchain = gctx.device.createSwapChain(gctx.surface, gctx.swapchain_descriptor);
+        //
+        //         std.log.info(
+        //             "[zgpu] Window has been resized to: {d}x{d}.",
+        //             .{ gctx.swapchain_descriptor.width, gctx.swapchain_descriptor.height },
+        //         );
+        //         return .swap_chain_resized;
+        //     }
+        // }
+        //
+        // return .normal_execution;
     }
 
     pub fn canRender(gctx: *GraphicsContext) bool {
