@@ -1,9 +1,9 @@
 const std = @import("std");
 const emscripten = @import("builtin").target.os.tag == .emscripten;
+const c = @cImport(@cInclude("webgpu.h"));
 
 test "extern struct ABI compatibility" {
     @setEvalBranchQuota(10_000);
-    // const wgpu = @cImport(@cInclude("dawn/webgpu.h"));
     const wgpu = @cImport(@cInclude("webgpu.h"));
     inline for (comptime std.meta.declarations(@This())) |decl| {
         const ZigType = @field(@This(), decl.name);
@@ -53,6 +53,12 @@ pub const CallbackMode = enum(u32) {
     wait_any_only = 0x00000001,
     allow_process_events = 0x00000002,
     allow_spontaneous = 0x00000003,
+};
+
+pub const InstanceFeatureName = enum(u32) {
+    timed_wait_any = 0x00000001,
+    shader_source_spirv = 0x00000002,
+    multiple_devices_per_adapter = 0x00000003,
 };
 
 pub const AdapterType = enum(u32) {
@@ -148,17 +154,24 @@ pub const BufferBindingType = enum(u32) {
     read_only_storage = 0x00000003,
 };
 
-pub const BufferMapAsyncStatus = enum(u32) {
-    success = 0x00000000,
-    validation_error = 0x00000001,
-    unknown = 0x00000002,
-    device_lost = 0x00000003,
-    destroyed_before_callback = 0x00000004,
-    unmapped_before_callback = 0x00000005,
-    mappingAlreadyPending = 0x00000006,
-    offset_out_of_range = 0x00000007,
-    size_out_of_range = 0x00000008,
+pub const MapAsyncStatus = enum(u32) {
+    success = 0x00000001,
+    callback_cancelled = 0x00000002,
+    err = 0x00000003,
+    aborted = 0x00000004,
 };
+
+// pub const BufferMapAsyncStatus = enum(u32) {
+//     success = 0x00000000,
+//     validation_error = 0x00000001,
+//     unknown = 0x00000002,
+//     device_lost = 0x00000003,
+//     destroyed_before_callback = 0x00000004,
+//     unmapped_before_callback = 0x00000005,
+//     mappingAlreadyPending = 0x00000006,
+//     offset_out_of_range = 0x00000007,
+//     size_out_of_range = 0x00000008,
+// };
 
 pub const BufferMapState = switch (emscripten) {
     true => enum(u32) {
@@ -254,31 +267,6 @@ pub const FeatureLevel = enum(u32) {
 };
 
 pub const FeatureName = enum(u32) {
-    // undef = 0x00000000,
-    // depth_clip_control = 0x00000001,
-    // depth32_float_stencil8 = 0x00000002,
-    // timestamp_query = 0x00000003,
-    // pipeline_statistics_query = 0x00000004,
-    // texture_compression_bc = 0x00000005,
-    // texture_compression_etc2 = 0x00000006,
-    // texture_compression_astc = 0x00000007,
-    // indirect_first_instance = 0x00000008,
-    // shader_f16 = 0x00000009,
-    // rg11_b10_ufloat_renderable = 0x0000000A,
-    // bgra8_unorm_storage = 0x0000000B,
-    // float32_filterable = 0x0000000C,
-    // depth_clamping = 0x000003E8,
-    // dawn_shader_float16 = 0x000003E9,
-    // dawn_internal_usages = 0x000003EA,
-    // dawn_multi_planar_formats = 0x000003EB,
-    // dawn_native = 0x000003EC,
-    // chromium_experimental_dp4a = 0x000003ED,
-    // timestamp_query_inside_passes = 0x000003EE,
-    // implicit_device_synchronization = 0x000003EF,
-    // surface_capabilities = 0x000003F0,
-    // transient_attachments = 0x000003F1,
-    // msaa_render_to_single_sampled = 0x000003F2,
-
     core_features_and_limits = 0x00000001,
     depth_clip_control = 0x00000002,
     depth_32_float_stencil_8 = 0x00000003,
@@ -451,7 +439,7 @@ pub const SurfaceSourceWindowsSwapChainPanel = extern struct {
 
 pub const SurfaceSourceCanvasHTMLSelector = extern struct {
     chain: ChainedStruct,
-    selector: StringView,
+    selector: c.WGPUStringView,
 };
 
 pub const StructType = enum(u32) {
@@ -685,7 +673,9 @@ pub const VertexStepMode = switch (emscripten) {
     },
 };
 
-pub const BufferUsage = packed struct(u32) {
+pub const Flags = u64;
+
+pub const BufferUsage = packed struct(Flags) {
     map_read: bool = false,
     map_write: bool = false,
     copy_src: bool = false,
@@ -696,40 +686,40 @@ pub const BufferUsage = packed struct(u32) {
     storage: bool = false,
     indirect: bool = false,
     query_resolve: bool = false,
-    _padding: u22 = 0,
+    _padding: u54 = 0,
 };
 
-pub const ColorWriteMask = packed struct(u32) {
+pub const ColorWriteMask = packed struct(Flags) {
     red: bool = false,
     green: bool = false,
     blue: bool = false,
     alpha: bool = false,
-    _padding: u28 = 0,
+    _padding: u60 = 0,
 
     pub const all = ColorWriteMask{ .red = true, .green = true, .blue = true, .alpha = true };
 };
 
-pub const MapMode = packed struct(u32) {
+pub const MapMode = packed struct(Flags) {
     read: bool = false,
     write: bool = false,
-    _padding: u30 = 0,
+    _padding: u62 = 0,
 };
 
-pub const ShaderStage = packed struct(u32) {
+pub const ShaderStage = packed struct(Flags) {
     vertex: bool = false,
     fragment: bool = false,
     compute: bool = false,
-    _padding: u29 = 0,
+    _padding: u61 = 0,
 };
 
-pub const TextureUsage = packed struct(u32) {
+pub const TextureUsage = packed struct(Flags) {
     copy_src: bool = false,
     copy_dst: bool = false,
     texture_binding: bool = false,
     storage_binding: bool = false,
     render_attachment: bool = false,
     transient_attachment: bool = false,
-    _padding: u26 = 0,
+    _padding: u58 = 0,
 };
 
 //
@@ -756,26 +746,34 @@ pub const ChainedStructOut = extern struct {
 };
 
 pub const StringView = extern struct {
-    data: ?[*]const u8 = null,
-    length: usize = 0,
+    pub const C = c.WGPUStringView;
+    data: ?[*]const u8,
+    length: usize,
 
-    pub fn fromZigStr(str: []const u8) StringView {
-        return StringView{
+    pub fn initC() c.WGPUStringView {
+        return c.WGPUStringView{
+            .data = null,
+            .length = 0,
+        };
+    }
+    pub fn cFromZig(str: []const u8) c.WGPUStringView {
+        return c.WGPUStringView{
             .data = str.ptr,
             .length = str.len,
         };
     }
-    pub fn zigStr(string_view: StringView) ?[]const u8 {
-        if (string_view.data) |dat| return dat[0..string_view.length] else return null;
+    pub fn zigFromC(str: c.WGPUStringView) ?[]const u8 {
+        if (str.length < 1) return null;
+        return str.data[0..str.length];
     }
 };
 
 pub const AdapterInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    vendor_name: StringView = .{},
-    architecture: StringView = .{},
-    device: StringView = .{},
-    description: StringView = .{},
+    vendor_name: c.WGPUStringView = .{},
+    architecture: c.WGPUStringView = .{},
+    device: c.WGPUStringView = .{},
+    description: c.WGPUStringView = .{},
     backend_type: BackendType = .undef,
     adapter_type: AdapterType = .unknown,
     vendor_id: u32 = 0,
@@ -815,6 +813,30 @@ pub const UncapturedErrorCallbackInfo = extern struct {
     userdata_2: ?*anyopaque = null,
 };
 
+pub const BufferMapCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undef,
+    callback: ?BufferMapCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
+pub const CreateComputePipelineAsyncCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undef,
+    callback: ?CreateComputePipelineAsyncCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
+pub const CreateRenderPipelineAsyncCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undef,
+    callback: ?CreateRenderPipelineAsyncCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
 pub const SupportedFeatures = extern struct {
     feature_count: usize,
     features: ?[*]FeatureName,
@@ -832,7 +854,7 @@ pub const BindGroupEntry = extern struct {
 
 pub const BindGroupDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     layout: BindGroupLayout,
     entry_count: usize,
     entries: ?[*]const BindGroupEntry,
@@ -876,7 +898,7 @@ pub const BindGroupLayoutEntry = extern struct {
 
 pub const BindGroupLayoutDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     entry_count: usize,
     entries: ?[*]const BindGroupLayoutEntry,
 };
@@ -888,7 +910,7 @@ pub const U32Bool = enum(u32) {
 
 pub const BufferDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     usage: BufferUsage,
     size: u64,
     mapped_at_creation: U32Bool = .false,
@@ -896,33 +918,33 @@ pub const BufferDescriptor = extern struct {
 
 pub const CommandEncoderDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
 };
 
 pub const ConstantEntry = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    key: StringView,
+    key: c.WGPUStringView,
     value: f64,
 };
 
 pub const ProgrammableStageDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: StringView,
+    entry_point: c.WGPUStringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
 };
 
 pub const ComputePipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     layout: ?PipelineLayout = null,
     compute: ProgrammableStageDescriptor,
 };
 
 pub const ExternalTextureDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     plane0: TextureView,
     plane1: ?TextureView = null,
     visible_origin: Origin2D,
@@ -938,14 +960,14 @@ pub const ExternalTextureDescriptor = extern struct {
 
 pub const PipelineLayoutDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     bind_group_layout_count: usize,
     bind_group_layouts: ?[*]const BindGroupLayout,
 };
 
 pub const QuerySetDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     query_type: QueryType,
     count: u32,
     pipeline_statistics: ?[*]const PipelineStatisticName,
@@ -954,7 +976,7 @@ pub const QuerySetDescriptor = extern struct {
 
 pub const RenderBundleEncoderDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     color_formats_count: usize,
     color_formats: ?[*]const TextureFormat,
     depth_stencil_format: TextureFormat,
@@ -979,7 +1001,7 @@ pub const VertexBufferLayout = extern struct {
 pub const VertexState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: StringView,
+    entry_point: c.WGPUStringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
     buffer_count: usize = 0,
@@ -1007,7 +1029,7 @@ pub const ColorTargetState = extern struct {
 pub const FragmentState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: StringView,
+    entry_point: c.WGPUStringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
     target_count: usize = 0,
@@ -1052,7 +1074,7 @@ pub const MultisampleState = extern struct {
 
 pub const RenderPipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     layout: ?PipelineLayout = null,
     vertex: VertexState,
     primitive: PrimitiveState = .{},
@@ -1063,7 +1085,7 @@ pub const RenderPipelineDescriptor = extern struct {
 
 pub const SamplerDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     address_mode_u: AddressMode = .clamp_to_edge,
     address_mode_v: AddressMode = .clamp_to_edge,
     address_mode_w: AddressMode = .clamp_to_edge,
@@ -1078,12 +1100,12 @@ pub const SamplerDescriptor = extern struct {
 
 pub const ShaderModuleDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
 };
 
 pub const ShaderSourceWGSL = extern struct {
     chain: ChainedStruct,
-    code: StringView,
+    code: c.WGPUStringView,
 };
 
 pub const SurfaceConfiguration = extern struct {
@@ -1118,7 +1140,7 @@ pub const Extent3D = extern struct {
 
 pub const TextureDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     usage: TextureUsage,
     dimension: TextureDimension = .tdim_2d,
     size: Extent3D,
@@ -1178,9 +1200,9 @@ pub const SupportedLimits = extern struct {
     limits: Limits = .{},
 };
 
-pub const QueueDescriptor = extern struct {
-    next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+pub const InstanceLimits = extern struct {
+    next_in_chain: ?*ChainedStructOut = null,
+    timed_wait_any_max_count: usize,
 };
 
 // Can be chained in InstanceDescriptor
@@ -1194,14 +1216,26 @@ pub const DawnTogglesDescriptor = extern struct {
     disabled_toggles: ?[*]const [*:0]const u8 = null,
 };
 
+pub const InstanceDescriptor = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    required_feature_count: usize = 0,
+    required_features: ?*const InstanceFeatureName = null,
+    required_limits: ?*const InstanceLimits = null,
+};
+
 pub const DawnAdapterPropertiesPowerPreference = extern struct {
     chain: ChainedStructOut,
     power_preference: PowerPreference,
 };
 
+pub const QueueDescriptor = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    label: c.WGPUStringView = StringView.initC(),
+};
+
 pub const DeviceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     required_features_count: usize = 0,
     required_features: ?[*]const FeatureName = null,
     required_limits: ?[*]const RequiredLimits = null,
@@ -1212,7 +1246,7 @@ pub const DeviceDescriptor = extern struct {
 
 pub const SurfaceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
 };
 
 pub const RequestAdapterOptions = extern struct {
@@ -1238,7 +1272,7 @@ pub const RenderPassTimestampWrite = extern struct {
 
 pub const ComputePassDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     timestamp_write_count: usize,
     timestamp_writes: ?[*]const ComputePassTimestampWrite,
 };
@@ -1284,7 +1318,7 @@ pub const RenderPassDepthStencilAttachment = extern struct {
 
 pub const RenderPassDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     color_attachment_count: usize,
     color_attachments: ?[*]const RenderPassColorAttachment,
     depth_stencil_attachment: ?*const RenderPassDepthStencilAttachment = null,
@@ -1334,7 +1368,7 @@ pub const ImageCopyExternalTexture = extern struct {
 
 pub const CommandBufferDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
 };
 
 // pub const CopyTextureForBrowserOptions = extern struct {
@@ -1351,7 +1385,7 @@ pub const CommandBufferDescriptor = extern struct {
 
 pub const TextureViewDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
     format: TextureFormat = .undef,
     dimension: TextureViewDimension = .undef,
     base_mip_level: u32 = 0,
@@ -1363,7 +1397,7 @@ pub const TextureViewDescriptor = extern struct {
 
 pub const CompilationMessage = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    message: StringView = .{},
+    message: c.WGPUStringView = StringView.initC(),
     message_type: CompilationMessageType,
     line_num: u64,
     line_pos: u64,
@@ -1382,39 +1416,42 @@ pub const CompilationInfo = extern struct {
 
 pub const RenderBundleDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = .{},
+    label: c.WGPUStringView = StringView.initC(),
 };
 
 pub const CreateComputePipelineAsyncCallback = *const fn (
     status: CreatePipelineAsyncStatus,
     pipeline: ComputePipeline,
-    message: StringView,
-    userdata: ?*anyopaque,
+    message: c.WGPUStringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const CreateRenderPipelineAsyncCallback = *const fn (
     status: CreatePipelineAsyncStatus,
     pipeline: RenderPipeline,
-    message: StringView,
-    userdata: ?*anyopaque,
+    message: c.WGPUStringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const ErrorCallback = *const fn (
     err_type: ErrorType,
-    message: StringView,
-    userdata: ?*anyopaque,
+    message: c.WGPUStringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const LoggingCallback = *const fn (
     log_type: LoggingType,
-    message: StringView,
+    message: c.WGPUStringView,
     userdata: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const DeviceLostCallback = *const fn (
     device: *const Device,
     reason: DeviceLostReason,
-    message: StringView,
+    message: c.WGPUStringView,
     userdata_1: ?*anyopaque,
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
@@ -1422,7 +1459,7 @@ pub const DeviceLostCallback = *const fn (
 pub const UncapturedErrorCallback = *const fn (
     device: *const Device,
     err_type: ErrorType,
-    message: StringView,
+    message: c.WGPUStringView,
     userdata_1: ?*anyopaque,
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
@@ -1430,7 +1467,7 @@ pub const UncapturedErrorCallback = *const fn (
 pub const RequestAdapterCallback = *const fn (
     status: RequestAdapterStatus,
     adapter: Adapter,
-    message: StringView,
+    message: c.WGPUStringView,
     userdata_1: ?*anyopaque,
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
@@ -1438,142 +1475,315 @@ pub const RequestAdapterCallback = *const fn (
 pub const RequestDeviceCallback = *const fn (
     status: RequestDeviceStatus,
     device: Device,
-    message: StringView,
+    message: c.WGPUStringView,
     userdata_1: ?*anyopaque,
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const BufferMapCallback = *const fn (
-    status: BufferMapAsyncStatus,
-    userdata: ?*anyopaque,
+    status: MapAsyncStatus,
+    message: c.WGPUStringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const QueueWorkDoneCallback = *const fn (
     status: QueueWorkDoneStatus,
-    userdata: ?*anyopaque,
+    message: c.WGPUStringView,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const CompilationInfoCallback = *const fn (
     status: CompilationInfoRequestStatus,
     info: *const CompilationInfo,
-    userdata: ?*anyopaque,
+    userdata_1: ?*anyopaque,
+    userdata_2: ?*anyopaque,
 ) callconv(.C) void;
+
+pub inline fn createInstance(desc: ?InstanceDescriptor) Instance {
+    return @ptrCast(c.wgpuCreateInstance(if(desc) |d| @ptrCast(&d) else null));
+}
+
+pub const Instance = *opaque {
+    pub fn createSurface(instance: Instance, descriptor: SurfaceDescriptor) Surface {
+        return @ptrCast(c.wgpuInstanceCreateSurface(@ptrCast(instance), @ptrCast(&descriptor)));
+    }
+
+    pub fn requestAdapter(
+        instance: Instance,
+        options: RequestAdapterOptions,
+        callback_info: RequestAdapterCallbackInfo,
+    ) Future {
+        return @bitCast(c.wgpuInstanceRequestAdapter(@ptrCast(instance), @ptrCast(&options), @bitCast(callback_info)));
+    }
+
+    pub fn waitAny(instance: Instance, futures: []FutureWaitInfo, timeout_ns: u64) WaitStatus {
+        return @enumFromInt(c.wgpuInstanceWaitAny(@ptrCast(instance), futures.len, @ptrCast(futures.ptr), timeout_ns));
+    }
+
+    pub fn addRef(instance: Instance) void {
+        c.wgpuInstanceAddRef(@ptrCast(instance));
+    }
+
+    pub fn release(instance: Instance) void {
+        c.wgpuInstanceRelease(@ptrCast(instance));
+    }
+};
 
 pub const Adapter = *opaque {
     pub fn getFeatures(adapter: Adapter, features: *SupportedFeatures) void {
-        wgpuAdapterGetFeatures(adapter, features);
+        c.wgpuAdapterGetFeatures(@ptrCast(adapter), @ptrCast(features));
     }
-    extern fn wgpuAdapterGetFeatures(adapter: Adapter, features: *SupportedFeatures) usize;
 
     pub fn getLimits(adapter: Adapter, limits: *SupportedLimits) bool {
-        return wgpuAdapterGetLimits(adapter, limits);
+        return c.wgpuAdapterGetLimits(@ptrCast(adapter), @ptrCast(limits));
     }
-    extern fn wgpuAdapterGetLimits(adapter: Adapter, limits: *SupportedLimits) bool;
 
-    pub fn getInfo(adapter: Adapter, properties: *AdapterInfo) void {
-        wgpuAdapterGetInfo(adapter, properties);
+    pub fn getInfo(adapter: Adapter, properties: *AdapterInfo) Status {
+        return @enumFromInt(c.wgpuAdapterGetInfo(@ptrCast(adapter), @ptrCast(properties)));
     }
-    extern fn wgpuAdapterGetInfo(adapter: Adapter, properties: *AdapterInfo) void;
 
     pub fn hasFeature(adapter: Adapter, feature: FeatureName) bool {
-        return wgpuAdapterHasFeature(adapter, feature);
+        return c.wgpuAdapterHasFeature(@ptrCast(adapter), feature);
     }
-    extern fn wgpuAdapterHasFeature(adapter: Adapter, feature: FeatureName) bool;
 
     pub fn requestDevice(
         adapter: Adapter,
         descriptor: DeviceDescriptor,
         callback_info: RequestDeviceCallbackInfo,
     ) Future {
-        return wgpuAdapterRequestDevice(adapter, &descriptor, callback_info);
+        return @bitCast(c.wgpuAdapterRequestDevice(@ptrCast(adapter), @ptrCast(&descriptor), @bitCast(callback_info)));
     }
-    extern fn wgpuAdapterRequestDevice(Adapter, *const DeviceDescriptor, RequestDeviceCallbackInfo) Future;
 
     pub fn addRef(adapter: Adapter) void {
-        wgpuAdapterAddRef(adapter);
+        c.wgpuAdapterAddRef(@ptrCast(adapter));
     }
-    extern fn wgpuAdapterAddRef(adapter: Adapter) void;
 
     pub fn release(adapter: Adapter) void {
-        wgpuAdapterRelease(adapter);
+        c.wgpuAdapterRelease(@ptrCast(adapter));
     }
-    extern fn wgpuAdapterRelease(adapter: Adapter) void;
+};
+
+pub const Device = *opaque {
+    pub fn createBindGroup(device: Device, descriptor: BindGroupDescriptor) BindGroup {
+        return @ptrCast(c.wgpuDeviceCreateBindGroup(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createBindGroupLayout(device: Device, descriptor: BindGroupLayoutDescriptor) BindGroupLayout {
+        return @ptrCast(c.wgpuDeviceCreateBindGroupLayout(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createBuffer(device: Device, descriptor: BufferDescriptor) Buffer {
+        return @ptrCast(c.wgpuDeviceCreateBuffer(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createCommandEncoder(device: Device, descriptor: ?CommandEncoderDescriptor) CommandEncoder {
+        return @ptrCast(c.wgpuDeviceCreateCommandEncoder(@ptrCast(device), if (descriptor) |d| @ptrCast(&d) else null));
+    }
+
+    pub fn createComputePipeline(device: Device, descriptor: ComputePipelineDescriptor) ComputePipeline {
+        return @ptrCast(c.wgpuDeviceCreateComputePipeline(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createComputePipelineAsync(
+        device: Device,
+        descriptor: ComputePipelineDescriptor,
+        callback_info: CreateComputePipelineAsyncCallbackInfo,
+    ) Future {
+        return @ptrCast(c.wgpuDeviceCreateComputePipelineAsync(
+            @ptrCast(device),
+            @ptrCast(&descriptor),
+            @bitCast(callback_info),
+        ));
+    }
+
+    // pub fn createErrorBuffer(device: Device) Buffer {
+    //     return @ptrCast(c.wgpuDeviceCreateErrorBuffer(@ptrCast(device)));
+    // }
+    //
+    // pub fn createExternalTexture(device: Device, descriptor: ExternalTextureDescriptor) ExternalTexture {
+    //     return @ptrCast(c.wgpuDeviceCreateExternalTexture(@ptrCast(device), @ptrCast(&descriptor)));
+    // }
+
+    pub fn createPipelineLayout(device: Device, descriptor: PipelineLayoutDescriptor) PipelineLayout {
+        return @ptrCast(c.wgpuDeviceCreatePipelineLayout(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createQuerySet(device: Device, descriptor: QuerySetDescriptor) QuerySet {
+        return @ptrCast(c.wgpuDeviceCreateQuerySet(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createRenderBundleEncoder(
+        device: Device,
+        descriptor: RenderBundleEncoderDescriptor,
+    ) RenderBundleEncoder {
+        return @ptrCast(c.wgpuDeviceCreateRenderBundleEncoder(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createRenderPipeline(device: Device, descriptor: RenderPipelineDescriptor) RenderPipeline {
+        return @ptrCast(c.wgpuDeviceCreateRenderPipeline(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createRenderPipelineAsync(
+        device: Device,
+        descriptor: RenderPipelineDescriptor,
+        callback_info: CreateRenderPipelineAsyncCallbackInfo,
+    ) Future {
+        return @bitCast(c.wgpuDeviceCreateRenderPipelineAsync(
+            @ptrCast(device),
+            @ptrCast(&descriptor),
+            @bitCast(callback_info),
+        ));
+    }
+
+    pub fn createSampler(device: Device, descriptor: SamplerDescriptor) Sampler {
+        return @ptrCast(c.wgpuDeviceCreateSampler(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createShaderModule(device: Device, descriptor: ShaderModuleDescriptor) ShaderModule {
+        return @ptrCast(c.wgpuDeviceCreateShaderModule(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn createTexture(device: Device, descriptor: TextureDescriptor) Texture {
+        return @ptrCast(c.wgpuDeviceCreateTexture(@ptrCast(device), @ptrCast(&descriptor)));
+    }
+
+    pub fn destroy(device: Device) void {
+        c.wgpuDeviceDestroy(@ptrCast(device));
+    }
+
+    // pub fn enumerateFeatures(device: Device, features: ?[*]FeatureName) usize {
+    //     return c.wgpuDeviceEnumerateFeatures(@ptrCast(device), features);
+    // }
+
+    pub fn getLimits(device: Device, limits: *SupportedLimits) bool {
+        return c.wgpuDeviceGetLimits(@ptrCast(device), limits);
+    }
+
+    pub fn getQueue(device: Device) Queue {
+        return @ptrCast(c.wgpuDeviceGetQueue(@ptrCast(device)));
+    }
+
+    pub fn hasFeature(device: Device, feature: FeatureName) bool {
+        return c.wgpuDeviceHasFeature(@ptrCast(device), feature);
+    }
+
+    // pub fn injectError(device: Device, err_type: ErrorType, message: []const u8) void {
+    //     c.wgpuDeviceInjectError(@ptrCast(device), err_type, StringView.cFromZig(message));
+    // }
+    //
+    // pub fn forceLoss(device: Device, reason: DeviceLostReason, message: []const u8) void {
+    //     c.wgpuDeviceForceLoss(@ptrCast(device), reason, StringView.cFromZig(message));
+    // }
+    //
+    // pub fn getAdapter(device: Device) Adapter {
+    //     return c.wgpuDeviceGetAdapter(@ptrCast(device));
+    // }
+
+    pub fn popErrorScope(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) bool {
+        return c.wgpuDevicePopErrorScope(@ptrCast(device), callback, userdata);
+    }
+
+    pub fn pushErrorScope(device: Device, filter: ErrorFilter) void {
+        c.wgpuDevicePushErrorScope(@ptrCast(device), filter);
+    }
+
+    // pub fn setDeviceLostCallback(
+    //     device: Device,
+    //     callback: DeviceLostCallback,
+    //     userdata: ?*anyopaque,
+    // ) void {
+    //     c.wgpuDeviceSetDeviceLostCallback(@ptrCast(device), callback, userdata);
+    // }
+
+    pub fn setLabel(device: Device, label: []const u8) void {
+        c.wgpuDeviceSetLabel(@ptrCast(device), StringView.cFromZig(label));
+    }
+
+    // pub fn setLoggingCallback(device: Device, callback: LoggingCallback, userdata: ?*anyopaque) void {
+    //     c.wgpuDeviceSetLoggingCallback(@ptrCast(device), callback, userdata);
+    // }
+    //
+    // pub fn setUncapturedErrorCallback(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) void {
+    //     c.wgpuDeviceSetUncapturedErrorCallback(@ptrCast(device), callback, userdata);
+    // }
+    //
+    // pub fn tick(device: Device) void {
+    //     c.wgpuDeviceTick(@ptrCast(device));
+    // }
+
+    pub fn addRef(device: Device) void {
+        c.wgpuDeviceAddRef(@ptrCast(device));
+    }
+
+    pub fn release(device: Device) void {
+        c.wgpuDeviceRelease(@ptrCast(device));
+    }
 };
 
 pub const BindGroup = *opaque {
     pub fn setLabel(bind_group: BindGroup, label: []const u8) void {
-        wgpuBindGroupSetLabel(bind_group, StringView.fromZigStr(label));
+        c.wgpuBindGroupSetLabel(@ptrCast(bind_group), StringView.cFromZig(label));
     }
-    extern fn wgpuBindGroupSetLabel(bind_group: BindGroup, label: StringView) void;
 
     pub fn addRef(bind_group: BindGroup) void {
-        wgpuBindGroupAddRef(bind_group);
+        c.wgpuBindGroupAddRef(@ptrCast(bind_group));
     }
-    extern fn wgpuBindGroupAddRef(bind_group: BindGroup) void;
 
     pub fn release(bind_group: BindGroup) void {
-        wgpuBindGroupRelease(bind_group);
+        c.wgpuBindGroupRelease(@ptrCast(bind_group));
     }
-    extern fn wgpuBindGroupRelease(bind_group: BindGroup) void;
 };
 
 pub const BindGroupLayout = *opaque {
     pub fn setLabel(bind_group_layout: BindGroupLayout, label: []const u8) void {
-        wgpuBindGroupLayoutSetLabel(bind_group_layout, StringView.fromZigStr(label));
+        c.wgpuBindGroupLayoutSetLabel(@ptrCast(bind_group_layout), StringView.cFromZig(label));
     }
-    extern fn wgpuBindGroupLayoutSetLabel(bind_group_layout: BindGroupLayout, label: StringView) void;
 
     pub fn addRef(bind_group_layout: BindGroupLayout) void {
-        wgpuBindGroupLayoutAddRef(bind_group_layout);
+        c.wgpuBindGroupLayoutAddRef(@ptrCast(bind_group_layout));
     }
-    extern fn wgpuBindGroupLayoutAddRef(bind_group_layout: BindGroupLayout) void;
 
     pub fn release(bind_group_layout: BindGroupLayout) void {
-        wgpuBindGroupLayoutRelease(bind_group_layout);
+        c.wgpuBindGroupLayoutRelease(@ptrCast(bind_group_layout));
     }
-    extern fn wgpuBindGroupLayoutRelease(bind_group_layout: BindGroupLayout) void;
 };
 
 pub const Buffer = *opaque {
     pub fn destroy(buffer: Buffer) void {
-        wgpuBufferDestroy(buffer);
+        c.wgpuBufferDestroy(@ptrCast(buffer));
     }
-    extern fn wgpuBufferDestroy(buffer: Buffer) void;
 
     // `offset` has to be a multiple of 8 (otherwise `null` will be returned).
     // `@sizeOf(T) * len` has to be a multiple of 4 (otherwise `null` will be returned).
     pub fn getConstMappedRange(buffer: Buffer, comptime T: type, offset: usize, len: usize) ?[]const T {
         if (len == 0) return null;
-        const ptr = wgpuBufferGetConstMappedRange(buffer, offset, @sizeOf(T) * len);
+        const ptr = c.wgpuBufferGetConstMappedRange(@ptrCast(buffer), offset, @sizeOf(T) * len);
         if (ptr == null) return null;
         return @as([*]const T, @ptrCast(@alignCast(ptr)))[0..len];
     }
-    extern fn wgpuBufferGetConstMappedRange(buffer: Buffer, offset: usize, size: usize) ?*const anyopaque;
 
     // `offset` - in bytes, has to be a multiple of 8 (otherwise `null` will be returned).
     // `len` - length of slice to return, in elements of type T, `@sizeOf(T) * len` has to be a multiple of 4 (otherwise `null` will be returned).
     pub fn getMappedRange(buffer: Buffer, comptime T: type, offset: usize, len: usize) ?[]T {
         if (len == 0) return null;
-        const ptr = wgpuBufferGetMappedRange(buffer, offset, @sizeOf(T) * len);
+        const ptr = c.wgpuBufferGetMappedRange(@ptrCast(buffer), offset, @sizeOf(T) * len);
         if (ptr == null) return null;
         return @as([*]T, @ptrCast(@alignCast(ptr)))[0..len];
     }
-    extern fn wgpuBufferGetMappedRange(buffer: Buffer, offset: usize, size: usize) ?*anyopaque;
 
     pub fn getMapState(buffer: Buffer) BufferMapState {
-        return wgpuBufferGetMapState(buffer);
+        return c.wgpuBufferGetMapState(@ptrCast(buffer));
     }
-    extern fn wgpuBufferGetMapState(buffer: Buffer) BufferMapState;
 
     pub fn getSize(buffer: Buffer) usize {
-        return @intCast(wgpuBufferGetSize(buffer));
+        return @intCast(c.wgpuBufferGetSize(@ptrCast(buffer)));
     }
-    extern fn wgpuBufferGetSize(buffer: Buffer) u64;
 
     pub fn getUsage(buffer: Buffer) BufferUsage {
-        return wgpuBufferGetUsage(buffer);
+        return c.wgpuBufferGetUsage(@ptrCast(buffer));
     }
-    extern fn wgpuBufferGetUsage(buffer: Buffer) BufferUsage;
 
     // `offset` - in bytes, has to be a multiple of 8 (Dawn's validation layer will warn).
     // `size` - size of buffer to map in bytes, has to be a multiple of 4 (Dawn's validation layer will warn).
@@ -1582,90 +1792,63 @@ pub const Buffer = *opaque {
         mode: MapMode,
         offset: usize,
         size: usize,
-        callback: BufferMapCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        wgpuBufferMapAsync(buffer, mode, offset, size, callback, userdata);
+        callback_info: BufferMapCallbackInfo,
+    ) Future {
+        return @bitCast(c.wgpuBufferMapAsync(@ptrCast(buffer), @bitCast(mode), offset, size, @bitCast(callback_info)));
     }
-    extern fn wgpuBufferMapAsync(
-        buffer: Buffer,
-        mode: MapMode,
-        offset: usize,
-        size: usize,
-        callback: BufferMapCallback,
-        userdata: ?*anyopaque,
-    ) void;
 
     pub fn setLabel(buffer: Buffer, label: []const u8) void {
-        wgpuBufferSetLabel(buffer, StringView.fromZigStr(label));
+        c.wgpuBufferSetLabel(@ptrCast(buffer), StringView.cFromZig(label));
     }
-    extern fn wgpuBufferSetLabel(buffer: Buffer, label: StringView) void;
 
     pub fn unmap(buffer: Buffer) void {
-        wgpuBufferUnmap(buffer);
+        c.wgpuBufferUnmap(@ptrCast(buffer));
     }
-    extern fn wgpuBufferUnmap(buffer: Buffer) void;
 
     pub fn addRef(buffer: Buffer) void {
-        wgpuBufferAddRef(buffer);
+        c.wgpuBufferAddRef(@ptrCast(buffer));
     }
-    extern fn wgpuBufferAddRef(buffer: Buffer) void;
 
     pub fn release(buffer: Buffer) void {
-        wgpuBufferRelease(buffer);
+        c.wgpuBufferRelease(@ptrCast(buffer));
     }
-    extern fn wgpuBufferRelease(buffer: Buffer) void;
 };
 
 pub const CommandBuffer = *opaque {
     pub fn setLabel(command_buffer: CommandBuffer, label: []const u8) void {
-        wgpuCommandBufferSetLabel(command_buffer, StringView.fromZigStr(label));
+        c.wgpuCommandBufferSetLabel(command_buffer, StringView.cFromZig(label));
     }
-    extern fn wgpuCommandBufferSetLabel(command_buffer: CommandBuffer, label: StringView) void;
 
     pub fn addRef(command_buffer: CommandBuffer) void {
-        wgpuCommandBufferAddRef(command_buffer);
+        c.wgpuCommandBufferAddRef(command_buffer);
     }
-    extern fn wgpuCommandBufferAddRef(command_buffer: CommandBuffer) void;
 
     pub fn release(command_buffer: CommandBuffer) void {
-        wgpuCommandBufferRelease(command_buffer);
+        c.wgpuCommandBufferRelease(@ptrCast(command_buffer));
     }
-    extern fn wgpuCommandBufferRelease(command_buffer: CommandBuffer) void;
 };
 
 pub const CommandEncoder = *opaque {
     pub fn beginComputePass(
-        command_encoder: CommandEncoder,
+        encoder: CommandEncoder,
         descriptor: ?ComputePassDescriptor,
     ) ComputePassEncoder {
-        return wgpuCommandEncoderBeginComputePass(command_encoder, if (descriptor) |d| &d else null);
+        return @ptrCast(c.wgpuCommandEncoderBeginComputePass(
+            @ptrCast(encoder),
+            if (descriptor) |d| @ptrCast(&d) else null,
+        ));
     }
-    extern fn wgpuCommandEncoderBeginComputePass(
-        command_encoder: CommandEncoder,
-        descriptor: ?*const ComputePassDescriptor,
-    ) ComputePassEncoder;
 
     pub fn beginRenderPass(
         command_encoder: CommandEncoder,
         descriptor: RenderPassDescriptor,
     ) RenderPassEncoder {
-        return wgpuCommandEncoderBeginRenderPass(command_encoder, &descriptor);
+        return @ptrCast(c.wgpuCommandEncoderBeginRenderPass(@ptrCast(command_encoder), @ptrCast(&descriptor)));
     }
-    extern fn wgpuCommandEncoderBeginRenderPass(
-        command_encoder: CommandEncoder,
-        descriptor: *const RenderPassDescriptor,
-    ) RenderPassEncoder;
 
     pub fn clearBuffer(command_encoder: CommandEncoder, buffer: Buffer, offset: usize, size: usize) void {
-        wgpuCommandEncoderClearBuffer(command_encoder, buffer, offset, size);
+        c.wgpuCommandEncoderClearBuffer(command_encoder, buffer, offset, size);
     }
-    extern fn wgpuCommandEncoderClearBuffer(
-        command_encoder: CommandEncoder,
-        buffer: Buffer,
-        offset: usize,
-        size: usize,
-    ) void;
 
     pub fn copyBufferToBuffer(
         command_encoder: CommandEncoder,
@@ -1675,23 +1858,15 @@ pub const CommandEncoder = *opaque {
         destination_offset: u64,
         size: u64,
     ) void {
-        wgpuCommandEncoderCopyBufferToBuffer(
-            command_encoder,
-            source,
+        c.wgpuCommandEncoderCopyBufferToBuffer(
+            @ptrCast(command_encoder),
+            @ptrCast(source),
             source_offset,
-            destination,
+            @ptrCast(destination),
             destination_offset,
             size,
         );
     }
-    extern fn wgpuCommandEncoderCopyBufferToBuffer(
-        command_encoder: CommandEncoder,
-        source: Buffer,
-        source_offset: u64,
-        destination: Buffer,
-        destination_offset: u64,
-        size: u64,
-    ) void;
 
     pub fn copyBufferToTexture(
         command_encoder: CommandEncoder,
@@ -1699,14 +1874,8 @@ pub const CommandEncoder = *opaque {
         destination: ImageCopyTexture,
         copy_size: Extent3D,
     ) void {
-        wgpuCommandEncoderCopyBufferToTexture(command_encoder, &source, &destination, &copy_size);
+        c.wgpuCommandEncoderCopyBufferToTexture(@ptrCast(command_encoder), &source, &destination, &copy_size);
     }
-    extern fn wgpuCommandEncoderCopyBufferToTexture(
-        command_encoder: CommandEncoder,
-        source: *const ImageCopyBuffer,
-        destination: *const ImageCopyTexture,
-        copy_size: *const Extent3D,
-    ) void;
 
     pub fn copyTextureToBuffer(
         command_encoder: CommandEncoder,
@@ -1714,14 +1883,8 @@ pub const CommandEncoder = *opaque {
         destination: ImageCopyBuffer,
         copy_size: Extent3D,
     ) void {
-        wgpuCommandEncoderCopyTextureToBuffer(command_encoder, &source, &destination, &copy_size);
+        c.wgpuCommandEncoderCopyTextureToBuffer(@ptrCast(command_encoder), &source, &destination, &copy_size);
     }
-    extern fn wgpuCommandEncoderCopyTextureToBuffer(
-        command_encoder: CommandEncoder,
-        source: *const ImageCopyTexture,
-        destination: *const ImageCopyBuffer,
-        copy_size: *const Extent3D,
-    ) void;
 
     pub fn copyTextureToTexture(
         command_encoder: CommandEncoder,
@@ -1729,42 +1892,36 @@ pub const CommandEncoder = *opaque {
         destination: ImageCopyTexture,
         copy_size: Extent3D,
     ) void {
-        wgpuCommandEncoderCopyTextureToTexture(command_encoder, &source, &destination, &copy_size);
+        c.wgpuCommandEncoderCopyTextureToTexture(
+            @ptrCast(command_encoder),
+            @ptrCast(&source),
+            @ptrCast(&destination),
+            @ptrCast(&copy_size),
+        );
     }
-    extern fn wgpuCommandEncoderCopyTextureToTexture(
-        command_encoder: CommandEncoder,
-        source: *const ImageCopyTexture,
-        destination: *const ImageCopyTexture,
-        copy_size: *const Extent3D,
-    ) void;
 
     pub fn finish(command_encoder: CommandEncoder, descriptor: ?CommandBufferDescriptor) CommandBuffer {
-        return wgpuCommandEncoderFinish(command_encoder, if (descriptor) |d| &d else null);
+        return @ptrCast(c.wgpuCommandEncoderFinish(
+            @ptrCast(command_encoder),
+            if (descriptor) |d| @ptrCast(&d) else null,
+        ));
     }
-    extern fn wgpuCommandEncoderFinish(
-        command_encoder: CommandEncoder,
-        descriptor: ?*const CommandBufferDescriptor,
-    ) CommandBuffer;
 
-    pub fn injectValidationError(command_encoder: CommandEncoder, message: StringView) void {
-        wgpuCommandEncoderInjectValidationError(command_encoder, message);
+    pub fn injectValidationError(command_encoder: CommandEncoder, message: []const u8) void {
+        c.wgpuCommandEncoderInjectValidationError(@ptrCast(command_encoder), StringView.cFromZig(message));
     }
-    extern fn wgpuCommandEncoderInjectValidationError(command_encoder: CommandEncoder, message: StringView) void;
 
-    pub fn insertDebugMarker(command_encoder: CommandEncoder, marker_label: StringView) void {
-        wgpuCommandEncoderInsertDebugMarker(command_encoder, marker_label);
+    pub fn insertDebugMarker(command_encoder: CommandEncoder, marker_label: []const u8) void {
+        c.wgpuCommandEncoderInsertDebugMarker(@ptrCast(command_encoder), StringView.cFromZig(marker_label));
     }
-    extern fn wgpuCommandEncoderInsertDebugMarker(command_encoder: CommandEncoder, marker_label: StringView) void;
 
     pub fn popDebugGroup(command_encoder: CommandEncoder) void {
-        wgpuCommandEncoderPopDebugGroup(command_encoder);
+        c.wgpuCommandEncoderPopDebugGroup(@ptrCast(command_encoder));
     }
-    extern fn wgpuCommandEncoderPopDebugGroup(command_encoder: CommandEncoder) void;
 
-    pub fn pushDebugGroup(command_encoder: CommandEncoder, group_label: StringView) void {
-        wgpuCommandEncoderPushDebugGroup(command_encoder, group_label);
+    pub fn pushDebugGroup(command_encoder: CommandEncoder, group_label: []const u8) void {
+        c.wgpuCommandEncoderPushDebugGroup(@ptrCast(command_encoder), StringView.cFromZig(group_label));
     }
-    extern fn wgpuCommandEncoderPushDebugGroup(command_encoder: CommandEncoder, group_label: StringView) void;
 
     pub fn resolveQuerySet(
         command_encoder: CommandEncoder,
@@ -1774,28 +1931,19 @@ pub const CommandEncoder = *opaque {
         destination: Buffer,
         destination_offset: u64,
     ) void {
-        wgpuCommandEncoderResolveQuerySet(
-            command_encoder,
-            query_set,
+        c.wgpuCommandEncoderResolveQuerySet(
+            @ptrCast(command_encoder),
+            @ptrCast(query_set),
             first_query,
             query_count,
-            destination,
+            @ptrCast(destination),
             destination_offset,
         );
     }
-    extern fn wgpuCommandEncoderResolveQuerySet(
-        command_encoder: CommandEncoder,
-        query_set: QuerySet,
-        first_query: u32,
-        query_count: u32,
-        destination: Buffer,
-        destination_offset: u64,
-    ) void;
 
     pub fn setLabel(command_encoder: CommandEncoder, label: []const u8) void {
-        wgpuCommandEncoderSetLabel(command_encoder, StringView.fromZigStr(label));
+        c.wgpuCommandEncoderSetLabel(@ptrCast(command_encoder), StringView.cFromZig(label));
     }
-    extern fn wgpuCommandEncoderSetLabel(command_encoder: CommandEncoder, label: StringView) void;
 
     pub fn writeBuffer(
         command_encoder: CommandEncoder,
@@ -1804,7 +1952,7 @@ pub const CommandEncoder = *opaque {
         comptime T: type,
         data: []const T,
     ) void {
-        wgpuCommandEncoderWriteBuffer(
+        c.wgpuCommandEncoderWriteBuffer(
             command_encoder,
             buffer,
             buffer_offset,
@@ -1812,32 +1960,18 @@ pub const CommandEncoder = *opaque {
             @as(u64, @intCast(data.len)) * @sizeOf(T),
         );
     }
-    extern fn wgpuCommandEncoderWriteBuffer(
-        command_encoder: CommandEncoder,
-        buffer: Buffer,
-        buffer_offset: u64,
-        data: [*]const u8,
-        size: u64,
-    ) void;
 
     pub fn writeTimestamp(command_encoder: CommandEncoder, query_set: QuerySet, query_index: u32) void {
-        wgpuCommandEncoderWriteTimestamp(command_encoder, query_set, query_index);
+        c.wgpuCommandEncoderWriteTimestamp(@ptrCast(command_encoder), @ptrCast(query_set), query_index);
     }
-    extern fn wgpuCommandEncoderWriteTimestamp(
-        command_encoder: CommandEncoder,
-        query_set: QuerySet,
-        query_index: u32,
-    ) void;
 
     pub fn addRef(command_encoder: CommandEncoder) void {
-        wgpuCommandEncoderAddRef(command_encoder);
+        c.wgpuCommandEncoderAddRef(command_encoder);
     }
-    extern fn wgpuCommandEncoderAddRef(command_encoder: CommandEncoder) void;
 
     pub fn release(command_encoder: CommandEncoder) void {
-        wgpuCommandEncoderRelease(command_encoder);
+        c.wgpuCommandEncoderRelease(@ptrCast(command_encoder));
     }
-    extern fn wgpuCommandEncoderRelease(command_encoder: CommandEncoder) void;
 };
 
 pub const ComputePassEncoder = *opaque {
@@ -1847,58 +1981,37 @@ pub const ComputePassEncoder = *opaque {
         workgroup_count_y: u32,
         workgroup_count_z: u32,
     ) void {
-        wgpuComputePassEncoderDispatchWorkgroups(
-            compute_pass_encoder,
+        c.wgpuComputePassEncoderDispatchWorkgroups(
+            @ptrCast(compute_pass_encoder),
             workgroup_count_x,
             workgroup_count_y,
             workgroup_count_z,
         );
     }
-    extern fn wgpuComputePassEncoderDispatchWorkgroups(
-        compute_pass_encoder: ComputePassEncoder,
-        workgroup_count_x: u32,
-        workgroup_count_y: u32,
-        workgroup_count_z: u32,
-    ) void;
 
     pub fn dispatchWorkgroupsIndirect(
         compute_pass_encoder: ComputePassEncoder,
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass_encoder, indirect_buffer, indirect_offset);
+        c.wgpuComputePassEncoderDispatchWorkgroupsIndirect(compute_pass_encoder, indirect_buffer, indirect_offset);
     }
-    extern fn wgpuComputePassEncoderDispatchWorkgroupsIndirect(
-        compute_pass_encoder: ComputePassEncoder,
-        indirect_buffer: Buffer,
-        indirect_offset: u64,
-    ) void;
 
     pub fn end(compute_pass_encoder: ComputePassEncoder) void {
-        wgpuComputePassEncoderEnd(compute_pass_encoder);
+        c.wgpuComputePassEncoderEnd(@ptrCast(compute_pass_encoder));
     }
-    extern fn wgpuComputePassEncoderEnd(compute_pass_encoder: ComputePassEncoder) void;
 
-    pub fn insertDebugMarker(compute_pass_encoder: ComputePassEncoder, marker_label: StringView) void {
-        wgpuComputePassEncoderInsertDebugMarker(compute_pass_encoder, marker_label);
+    pub fn insertDebugMarker(compute_pass_encoder: ComputePassEncoder, marker_label: []const u8) void {
+        c.wgpuComputePassEncoderInsertDebugMarker(compute_pass_encoder, StringView.cFromZig(marker_label));
     }
-    extern fn wgpuComputePassEncoderInsertDebugMarker(
-        compute_pass_encoder: ComputePassEncoder,
-        marker_label: StringView,
-    ) void;
 
     pub fn popDebugGroup(compute_pass_encoder: ComputePassEncoder) void {
-        wgpuComputePassEncoderPopDebugGroup(compute_pass_encoder);
+        c.wgpuComputePassEncoderPopDebugGroup(compute_pass_encoder);
     }
-    extern fn wgpuComputePassEncoderPopDebugGroup(compute_pass_encoder: ComputePassEncoder) void;
 
-    pub fn pushDebugGroup(compute_pass_encoder: ComputePassEncoder, group_label: StringView) void {
-        wgpuComputePassEncoderPushDebugGroup(compute_pass_encoder, group_label);
+    pub fn pushDebugGroup(compute_pass_encoder: ComputePassEncoder, group_label: []const u8) void {
+        c.wgpuComputePassEncoderPushDebugGroup(compute_pass_encoder, StringView.cFromZig(group_label));
     }
-    extern fn wgpuComputePassEncoderPushDebugGroup(
-        compute_pass_encoder: ComputePassEncoder,
-        group_label: StringView,
-    ) void;
 
     pub fn setBindGroup(
         compute_pass_encoder: ComputePassEncoder,
@@ -1906,401 +2019,106 @@ pub const ComputePassEncoder = *opaque {
         bind_group: BindGroup,
         dynamic_offsets: ?[]const u32,
     ) void {
-        wgpuComputePassEncoderSetBindGroup(
-            compute_pass_encoder,
+        c.wgpuComputePassEncoderSetBindGroup(
+            @ptrCast(compute_pass_encoder),
             group_index,
-            bind_group,
+            @ptrCast(bind_group),
             if (dynamic_offsets) |dynoff| @as(u32, @intCast(dynoff.len)) else 0,
             if (dynamic_offsets) |dynoff| dynoff.ptr else null,
         );
     }
-    extern fn wgpuComputePassEncoderSetBindGroup(
-        compute_pass_encoder: ComputePassEncoder,
-        group_index: u32,
-        bind_group: BindGroup,
-        dynamic_offset_count: u32,
-        dynamic_offsets: ?[*]const u32,
-    ) void;
 
     pub fn setLabel(compute_pass_encoder: ComputePassEncoder, label: []const u8) void {
-        wgpuComputePassEncoderSetLabel(compute_pass_encoder, StringView.fromZigStr(label));
+        c.wgpuComputePassEncoderSetLabel(@ptrCast(compute_pass_encoder), StringView.cFromZig(label));
     }
-    extern fn wgpuComputePassEncoderSetLabel(compute_pass_encoder: ComputePassEncoder, label: StringView) void;
 
     pub fn setPipeline(compute_pass_encoder: ComputePassEncoder, pipeline: ComputePipeline) void {
-        wgpuComputePassEncoderSetPipeline(compute_pass_encoder, pipeline);
+        c.wgpuComputePassEncoderSetPipeline(@ptrCast(compute_pass_encoder), @ptrCast(pipeline));
     }
-    extern fn wgpuComputePassEncoderSetPipeline(
-        compute_pass_encoder: ComputePassEncoder,
-        pipeline: ComputePipeline,
-    ) void;
 
     pub fn writeTimestamp(
         compute_pass_encoder: ComputePassEncoder,
         query_set: QuerySet,
         query_index: u32,
     ) void {
-        wgpuComputePassEncoderWriteTimestamp(compute_pass_encoder, query_set, query_index);
+        c.wgpuComputePassEncoderWriteTimestamp(compute_pass_encoder, query_set, query_index);
     }
-    extern fn wgpuComputePassEncoderWriteTimestamp(
-        compute_pass_encoder: ComputePassEncoder,
-        query_set: QuerySet,
-        query_index: u32,
-    ) void;
 
     pub fn addRef(compute_pass_encoder: ComputePassEncoder) void {
-        wgpuComputePassEncoderAddRef(compute_pass_encoder);
+        c.wgpuComputePassEncoderAddRef(compute_pass_encoder);
     }
-    extern fn wgpuComputePassEncoderAddRef(compute_pass_encoder: ComputePassEncoder) void;
 
     pub fn release(compute_pass_encoder: ComputePassEncoder) void {
-        wgpuComputePassEncoderRelease(compute_pass_encoder);
+        c.wgpuComputePassEncoderRelease(@ptrCast(compute_pass_encoder));
     }
-    extern fn wgpuComputePassEncoderRelease(compute_pass_encoder: ComputePassEncoder) void;
 };
 
 pub const ComputePipeline = *opaque {
     pub fn getBindGroupLayout(compute_pipeline: ComputePipeline, group_index: u32) BindGroupLayout {
-        return wgpuComputePipelineGetBindGroupLayout(compute_pipeline, group_index);
+        return c.wgpuComputePipelineGetBindGroupLayout(compute_pipeline, group_index);
     }
-    extern fn wgpuComputePipelineGetBindGroupLayout(
-        compute_pipeline: ComputePipeline,
-        group_index: u32,
-    ) BindGroupLayout;
 
     pub fn setLabel(compute_pipeline: ComputePipeline, label: []const u8) void {
-        wgpuComputePipelineSetLabel(compute_pipeline, StringView.fromZigStr(label));
+        c.wgpuComputePipelineSetLabel(compute_pipeline, StringView.cFromZig(label));
     }
-    extern fn wgpuComputePipelineSetLabel(compute_pipeline: ComputePipeline, label: StringView) void;
 
     pub fn addRef(compute_pipeline: ComputePipeline) void {
-        wgpuComputePipelineAddRef(compute_pipeline);
+        c.wgpuComputePipelineAddRef(compute_pipeline);
     }
-    extern fn wgpuComputePipelineAddRef(compute_pipeline: ComputePipeline) void;
 
     pub fn release(compute_pipeline: ComputePipeline) void {
-        wgpuComputePipelineRelease(compute_pipeline);
+        c.wgpuComputePipelineRelease(@ptrCast(compute_pipeline));
     }
-    extern fn wgpuComputePipelineRelease(compute_pipeline: ComputePipeline) void;
-};
-
-pub const Device = *opaque {
-    pub fn createBindGroup(device: Device, descriptor: BindGroupDescriptor) BindGroup {
-        return wgpuDeviceCreateBindGroup(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateBindGroup(device: Device, descriptor: *const BindGroupDescriptor) BindGroup;
-
-    pub fn createBindGroupLayout(device: Device, descriptor: BindGroupLayoutDescriptor) BindGroupLayout {
-        return wgpuDeviceCreateBindGroupLayout(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateBindGroupLayout(
-        device: Device,
-        descriptor: *const BindGroupLayoutDescriptor,
-    ) BindGroupLayout;
-
-    pub fn createBuffer(device: Device, descriptor: BufferDescriptor) Buffer {
-        return wgpuDeviceCreateBuffer(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateBuffer(device: Device, descriptor: *const BufferDescriptor) Buffer;
-
-    pub fn createCommandEncoder(device: Device, descriptor: ?CommandEncoderDescriptor) CommandEncoder {
-        return wgpuDeviceCreateCommandEncoder(device, if (descriptor) |d| &d else null);
-    }
-    extern fn wgpuDeviceCreateCommandEncoder(
-        device: Device,
-        descriptor: ?*const CommandEncoderDescriptor,
-    ) CommandEncoder;
-
-    pub fn createComputePipeline(device: Device, descriptor: ComputePipelineDescriptor) ComputePipeline {
-        return wgpuDeviceCreateComputePipeline(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateComputePipeline(
-        device: Device,
-        descriptor: *const ComputePipelineDescriptor,
-    ) ComputePipeline;
-
-    pub fn createComputePipelineAsync(
-        device: Device,
-        descriptor: ComputePipelineDescriptor,
-        callback: CreateComputePipelineAsyncCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        wgpuDeviceCreateComputePipelineAsync(device, &descriptor, callback, userdata);
-    }
-    extern fn wgpuDeviceCreateComputePipelineAsync(
-        device: Device,
-        descriptor: *const ComputePipelineDescriptor,
-        callback: CreateComputePipelineAsyncCallback,
-        userdata: ?*anyopaque,
-    ) void;
-
-    pub fn createErrorBuffer(device: Device) Buffer {
-        return wgpuDeviceCreateErrorBuffer(device);
-    }
-    extern fn wgpuDeviceCreateErrorBuffer(device: Device) Buffer;
-
-    pub fn createExternalTexture(device: Device, descriptor: ExternalTextureDescriptor) ExternalTexture {
-        return wgpuDeviceCreateExternalTexture(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateExternalTexture(
-        device: Device,
-        descriptor: *const ExternalTextureDescriptor,
-    ) ExternalTexture;
-
-    pub fn createPipelineLayout(device: Device, descriptor: PipelineLayoutDescriptor) PipelineLayout {
-        return wgpuDeviceCreatePipelineLayout(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreatePipelineLayout(
-        device: Device,
-        descriptor: *const PipelineLayoutDescriptor,
-    ) PipelineLayout;
-
-    pub fn createQuerySet(device: Device, descriptor: QuerySetDescriptor) QuerySet {
-        return wgpuDeviceCreateQuerySet(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateQuerySet(device: Device, descriptor: *const QuerySetDescriptor) QuerySet;
-
-    pub fn createRenderBundleEncoder(
-        device: Device,
-        descriptor: RenderBundleEncoderDescriptor,
-    ) RenderBundleEncoder {
-        return wgpuDeviceCreateRenderBundleEncoder(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateRenderBundleEncoder(
-        device: Device,
-        descriptor: *const RenderBundleEncoderDescriptor,
-    ) RenderBundleEncoder;
-
-    pub fn createRenderPipeline(device: Device, descriptor: RenderPipelineDescriptor) RenderPipeline {
-        return wgpuDeviceCreateRenderPipeline(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateRenderPipeline(
-        device: Device,
-        descriptor: *const RenderPipelineDescriptor,
-    ) RenderPipeline;
-
-    pub fn createRenderPipelineAsync(
-        device: Device,
-        descriptor: RenderPipelineDescriptor,
-        callback: CreateRenderPipelineAsyncCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        wgpuDeviceCreateRenderPipelineAsync(device, &descriptor, callback, userdata);
-    }
-    extern fn wgpuDeviceCreateRenderPipelineAsync(
-        device: Device,
-        descriptor: *const RenderPipelineDescriptor,
-        callback: CreateRenderPipelineAsyncCallback,
-        userdata: ?*anyopaque,
-    ) void;
-
-    pub fn createSampler(device: Device, descriptor: SamplerDescriptor) Sampler {
-        return wgpuDeviceCreateSampler(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateSampler(device: Device, descriptor: *const SamplerDescriptor) Sampler;
-
-    pub fn createShaderModule(device: Device, descriptor: ShaderModuleDescriptor) ShaderModule {
-        return wgpuDeviceCreateShaderModule(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateShaderModule(device: Device, descriptor: *const ShaderModuleDescriptor) ShaderModule;
-
-    pub fn createTexture(device: Device, descriptor: TextureDescriptor) Texture {
-        return wgpuDeviceCreateTexture(device, &descriptor);
-    }
-    extern fn wgpuDeviceCreateTexture(device: Device, descriptor: *const TextureDescriptor) Texture;
-
-    pub fn destroy(device: Device) void {
-        wgpuDeviceDestroy(device);
-    }
-    extern fn wgpuDeviceDestroy(device: Device) void;
-
-    pub fn enumerateFeatures(device: Device, features: ?[*]FeatureName) usize {
-        return wgpuDeviceEnumerateFeatures(device, features);
-    }
-    extern fn wgpuDeviceEnumerateFeatures(device: Device, features: ?[*]FeatureName) usize;
-
-    pub fn getLimits(device: Device, limits: *SupportedLimits) bool {
-        return wgpuDeviceGetLimits(device, limits);
-    }
-    extern fn wgpuDeviceGetLimits(device: Device, limits: *SupportedLimits) bool;
-
-    pub fn getQueue(device: Device) Queue {
-        return wgpuDeviceGetQueue(device);
-    }
-    extern fn wgpuDeviceGetQueue(device: Device) Queue;
-
-    pub fn hasFeature(device: Device, feature: FeatureName) bool {
-        return wgpuDeviceHasFeature(device, feature);
-    }
-    extern fn wgpuDeviceHasFeature(device: Device, feature: FeatureName) bool;
-
-    pub fn injectError(device: Device, err_type: ErrorType, message: StringView) void {
-        wgpuDeviceInjectError(device, err_type, message);
-    }
-    extern fn wgpuDeviceInjectError(device: Device, err_type: ErrorType, message: StringView) void;
-
-    pub fn forceLoss(device: Device, reason: DeviceLostReason, message: StringView) void {
-        wgpuDeviceForceLoss(device, reason, message);
-    }
-    extern fn wgpuDeviceForceLoss(device: Device, reason: DeviceLostReason, message: StringView) void;
-
-    pub fn getAdapter(device: Device) Adapter {
-        return wgpuDeviceGetAdapter(device);
-    }
-    extern fn wgpuDeviceGetAdapter(device: Device) Adapter;
-
-    pub fn popErrorScope(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) bool {
-        return wgpuDevicePopErrorScope(device, callback, userdata);
-    }
-    extern fn wgpuDevicePopErrorScope(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) bool;
-
-    pub fn pushErrorScope(device: Device, filter: ErrorFilter) void {
-        wgpuDevicePushErrorScope(device, filter);
-    }
-    extern fn wgpuDevicePushErrorScope(device: Device, filter: ErrorFilter) void;
-
-    pub fn setDeviceLostCallback(
-        device: Device,
-        callback: DeviceLostCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        wgpuDeviceSetDeviceLostCallback(device, callback, userdata);
-    }
-    extern fn wgpuDeviceSetDeviceLostCallback(
-        device: Device,
-        callback: DeviceLostCallback,
-        userdata: ?*anyopaque,
-    ) void;
-
-    pub fn setLabel(device: Device, label: []const u8) void {
-        wgpuDeviceSetLabel(device, StringView.fromZigStr(label));
-    }
-    extern fn wgpuDeviceSetLabel(device: Device, label: StringView) void;
-
-    pub fn setLoggingCallback(device: Device, callback: LoggingCallback, userdata: ?*anyopaque) void {
-        wgpuDeviceSetLoggingCallback(device, callback, userdata);
-    }
-    extern fn wgpuDeviceSetLoggingCallback(device: Device, callback: LoggingCallback, userdata: ?*anyopaque) void;
-
-    pub fn setUncapturedErrorCallback(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) void {
-        wgpuDeviceSetUncapturedErrorCallback(device, callback, userdata);
-    }
-    extern fn wgpuDeviceSetUncapturedErrorCallback(
-        device: Device,
-        callback: ErrorCallback,
-        userdata: ?*anyopaque,
-    ) void;
-
-    pub fn tick(device: Device) void {
-        wgpuDeviceTick(device);
-    }
-    extern fn wgpuDeviceTick(device: Device) void;
-
-    pub fn addRef(device: Device) void {
-        wgpuDeviceAddRef(device);
-    }
-    extern fn wgpuDeviceAddRef(device: Device) void;
-
-    pub fn release(device: Device) void {
-        wgpuDeviceRelease(device);
-    }
-    extern fn wgpuDeviceRelease(device: Device) void;
 };
 
 pub const ExternalTexture = *opaque {
     pub fn destroy(external_texture: ExternalTexture) void {
-        wgpuExternalTextureDestroy(external_texture);
+        c.wgpuExternalTextureDestroy(external_texture);
     }
-    extern fn wgpuExternalTextureDestroy(external_texture: ExternalTexture) void;
 
     pub fn setLabel(external_texture: ExternalTexture, label: []const u8) void {
-        wgpuExternalTextureSetLabel(external_texture, StringView.fromZigStr(label));
+        c.wgpuExternalTextureSetLabel(external_texture, StringView.cFromZig(label));
     }
-    extern fn wgpuExternalTextureSetLabel(external_texture: ExternalTexture, label: StringView) void;
 
     pub fn addRef(external_texture: ExternalTexture) void {
-        wgpuExternalTextureAddRef(external_texture);
+        c.wgpuExternalTextureAddRef(external_texture);
     }
-    extern fn wgpuExternalTextureAddRef(external_texture: ExternalTexture) void;
 
     pub fn release(external_texture: ExternalTexture) void {
-        wgpuExternalTextureRelease(external_texture);
+        c.wgpuExternalTextureRelease(external_texture);
     }
-    extern fn wgpuExternalTextureRelease(external_texture: ExternalTexture) void;
-};
-
-pub const Instance = *opaque {
-    pub fn createSurface(instance: Instance, descriptor: SurfaceDescriptor) Surface {
-        return wgpuInstanceCreateSurface(instance, &descriptor);
-    }
-    extern fn wgpuInstanceCreateSurface(instance: Instance, descriptor: *const SurfaceDescriptor) Surface;
-
-    pub fn requestAdapter(
-        instance: Instance,
-        options: RequestAdapterOptions,
-        callback_info: RequestAdapterCallbackInfo,
-    ) Future {
-        return wgpuInstanceRequestAdapter(instance, &options, callback_info);
-    }
-    extern fn wgpuInstanceRequestAdapter(
-        instance: Instance,
-        options: *const RequestAdapterOptions,
-        callback_info: RequestAdapterCallbackInfo,
-    ) Future;
-
-    pub fn waitAny(instance: Instance, futures: []FutureWaitInfo, timeout_ns: u64) WaitStatus {
-        return wgpuInstanceWaitAny(instance, futures.len, futures.ptr, timeout_ns);
-    }
-    extern fn wgpuInstanceWaitAny(Instance, usize, ?[*]FutureWaitInfo, u64) WaitStatus;
-
-    pub fn addRef(instance: Instance) void {
-        wgpuInstanceAddRef(instance);
-    }
-    extern fn wgpuInstanceAddRef(instance: Instance) void;
-
-    pub fn release(instance: Instance) void {
-        wgpuInstanceRelease(instance);
-    }
-    extern fn wgpuInstanceRelease(instance: Instance) void;
 };
 
 pub const PipelineLayout = *opaque {
     pub fn setLabel(pipeline_layout: PipelineLayout, label: []const u8) void {
-        wgpuPipelineLayoutSetLabel(pipeline_layout, StringView.fromZigStr(label));
+        c.wgpuPipelineLayoutSetLabel(pipeline_layout, StringView.cFromZig(label));
     }
-    extern fn wgpuPipelineLayoutSetLabel(pipeline_layout: PipelineLayout, label: StringView) void;
 
     pub fn addRef(pipeline_layout: PipelineLayout) void {
-        wgpuPipelineLayoutAddRef(pipeline_layout);
+        c.wgpuPipelineLayoutAddRef(pipeline_layout);
     }
-    extern fn wgpuPipelineLayoutAddRef(pipeline_layout: PipelineLayout) void;
 
     pub fn release(pipeline_layout: PipelineLayout) void {
-        wgpuPipelineLayoutRelease(pipeline_layout);
+        c.wgpuPipelineLayoutRelease(@ptrCast(pipeline_layout));
     }
-    extern fn wgpuPipelineLayoutRelease(pipeline_layout: PipelineLayout) void;
 };
 
 pub const QuerySet = *opaque {
     pub fn destroy(query_set: QuerySet) void {
-        wgpuQuerySetDestroy(query_set);
+        c.wgpuQuerySetDestroy(query_set);
     }
-    extern fn wgpuQuerySetDestroy(query_set: QuerySet) void;
 
     pub fn setLabel(query_set: QuerySet, label: []const u8) void {
-        wgpuQuerySetSetLabel(query_set, StringView.fromZigStr(label));
+        c.wgpuQuerySetSetLabel(query_set, StringView.cFromZig(label));
     }
-    extern fn wgpuQuerySetSetLabel(query_set: QuerySet, label: StringView) void;
 
     pub fn addRef(query_set: QuerySet) void {
-        wgpuQuerySetAddRef(query_set);
+        c.wgpuQuerySetAddRef(query_set);
     }
-    extern fn wgpuQuerySetAddRef(query_set: QuerySet) void;
 
     pub fn release(query_set: QuerySet) void {
-        wgpuQuerySetRelease(query_set);
+        c.wgpuQuerySetRelease(@ptrCast(query_set));
     }
-    extern fn wgpuQuerySetRelease(query_set: QuerySet) void;
 };
 
 pub const Queue = *opaque {
@@ -2368,14 +2186,12 @@ pub const Queue = *opaque {
         }
     }
     pub fn setLabel(queue: Queue, label: []const u8) void {
-        wgpuQueueSetLabel(queue, StringView.fromZigStr(label));
+        c.wgpuQueueSetLabel(queue, StringView.cFromZig(label));
     }
-    extern fn wgpuQueueSetLabel(queue: Queue, label: StringView) void;
 
     pub fn submit(queue: Queue, commands: []const CommandBuffer) void {
-        wgpuQueueSubmit(queue, @as(u32, @intCast(commands.len)), commands.ptr);
+        c.wgpuQueueSubmit(@ptrCast(queue), @as(u32, @intCast(commands.len)), commands.ptr);
     }
-    extern fn wgpuQueueSubmit(queue: Queue, command_count: u32, commands: [*]const CommandBuffer) void;
 
     pub fn writeBuffer(
         queue: Queue,
@@ -2384,21 +2200,14 @@ pub const Queue = *opaque {
         comptime T: type,
         data: []const T,
     ) void {
-        wgpuQueueWriteBuffer(
-            queue,
-            buffer,
+        c.wgpuQueueWriteBuffer(
+            @ptrCast(queue),
+            @ptrCast(buffer),
             @intCast(buffer_offset),
             @as(*const anyopaque, @ptrCast(data.ptr)),
             data.len * @sizeOf(T),
         );
     }
-    extern fn wgpuQueueWriteBuffer(
-        queue: Queue,
-        buffer: Buffer,
-        buffer_offset: u64,
-        data: *const anyopaque,
-        size: usize,
-    ) void;
 
     pub fn writeTexture(
         queue: Queue,
@@ -2408,45 +2217,33 @@ pub const Queue = *opaque {
         comptime T: type,
         data: []const T,
     ) void {
-        wgpuQueueWriteTexture(
-            queue,
-            &destination,
+        c.wgpuQueueWriteTexture(
+            @ptrCast(queue),
+            @ptrCast(&destination),
             @as(*const anyopaque, @ptrCast(data.ptr)),
             @as(usize, @intCast(data.len)) * @sizeOf(T),
-            &data_layout,
-            &write_size,
+            @ptrCast(&data_layout),
+            @ptrCast(&write_size),
         );
     }
-    extern fn wgpuQueueWriteTexture(
-        queue: Queue,
-        destination: *const ImageCopyTexture,
-        data: *const anyopaque,
-        data_size: usize,
-        data_layout: *const TextureDataLayout,
-        write_size: *const Extent3D,
-    ) void;
 
     pub fn addRef(queue: Queue) void {
-        wgpuQueueAddRef(queue);
+        c.wgpuQueueAddRef(@ptrCast(queue));
     }
-    extern fn wgpuQueueAddRef(queue: Queue) void;
 
     pub fn release(queue: Queue) void {
-        wgpuQueueRelease(queue);
+        c.wgpuQueueRelease(@ptrCast(queue));
     }
-    extern fn wgpuQueueRelease(queue: Queue) void;
 };
 
 pub const RenderBundle = *opaque {
     pub fn addRef(render_bundle: RenderBundle) void {
-        wgpuRenderBundleAddRef(render_bundle);
+        c.wgpuRenderBundleAddRef(render_bundle);
     }
-    extern fn wgpuRenderBundleAddRef(render_bundle: RenderBundle) void;
 
     pub fn release(render_bundle: RenderBundle) void {
-        wgpuRenderBundleRelease(render_bundle);
+        c.wgpuRenderBundleRelease(render_bundle);
     }
-    extern fn wgpuRenderBundleRelease(render_bundle: RenderBundle) void;
 };
 
 pub const RenderBundleEncoder = *opaque {
@@ -2457,7 +2254,7 @@ pub const RenderBundleEncoder = *opaque {
         first_vertex: u32,
         first_instance: u32,
     ) void {
-        wgpuRenderBundleEncoderDraw(
+        c.wgpuRenderBundleEncoderDraw(
             render_bundle_encoder,
             vertex_count,
             instance_count,
@@ -2465,13 +2262,6 @@ pub const RenderBundleEncoder = *opaque {
             first_instance,
         );
     }
-    extern fn wgpuRenderBundleEncoderDraw(
-        render_bundle_encoder: RenderBundleEncoder,
-        vertex_count: u32,
-        instance_count: u32,
-        first_vertex: u32,
-        first_instance: u32,
-    ) void;
 
     pub fn drawIndexed(
         render_bundle_encoder: RenderBundleEncoder,
@@ -2481,7 +2271,7 @@ pub const RenderBundleEncoder = *opaque {
         base_vertex: i32,
         first_instance: u32,
     ) void {
-        wgpuRenderBundleEncoderDrawIndexed(
+        c.wgpuRenderBundleEncoderDrawIndexed(
             render_bundle_encoder,
             index_count,
             instance_count,
@@ -2490,75 +2280,44 @@ pub const RenderBundleEncoder = *opaque {
             first_instance,
         );
     }
-    extern fn wgpuRenderBundleEncoderDrawIndexed(
-        render_bundle_encoder: RenderBundleEncoder,
-        index_count: u32,
-        instance_count: u32,
-        first_index: u32,
-        base_vertex: i32,
-        first_instance: u32,
-    ) void;
 
     pub fn drawIndexedIndirect(
         render_bundle_encoder: RenderBundleEncoder,
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        wgpuRenderBundleEncoderDrawIndexedIndirect(render_bundle_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderBundleEncoderDrawIndexedIndirect(render_bundle_encoder, indirect_buffer, indirect_offset);
     }
-    extern fn wgpuRenderBundleEncoderDrawIndexedIndirect(
-        render_bundle_encoder: RenderBundleEncoder,
-        indirect_buffer: Buffer,
-        indirect_offset: u64,
-    ) void;
 
     pub fn drawIndirect(
         render_bundle_encoder: RenderBundleEncoder,
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        wgpuRenderBundleEncoderDrawIndirect(render_bundle_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderBundleEncoderDrawIndirect(render_bundle_encoder, indirect_buffer, indirect_offset);
     }
-    extern fn wgpuRenderBundleEncoderDrawIndirect(
-        render_bundle_encoder: RenderBundleEncoder,
-        indirect_buffer: Buffer,
-        indirect_offset: u64,
-    ) void;
 
     pub fn finish(
         render_bundle_encoder: RenderBundleEncoder,
         descriptor: RenderBundleDescriptor,
     ) RenderBundle {
-        return wgpuRenderBundleEncoderFinish(render_bundle_encoder, &descriptor);
+        return c.wgpuRenderBundleEncoderFinish(render_bundle_encoder, &descriptor);
     }
-    extern fn wgpuRenderBundleEncoderFinish(
-        render_bundle_encoder: RenderBundleEncoder,
-        descriptor: *const RenderBundleDescriptor,
-    ) RenderBundle;
 
     pub fn insertDebugMarker(
         render_bundle_encoder: RenderBundleEncoder,
-        marker_label: StringView,
+        marker_label: []const u8,
     ) void {
-        wgpuRenderBundleEncoderInsertDebugMarker(render_bundle_encoder, marker_label);
+        c.wgpuRenderBundleEncoderInsertDebugMarker(render_bundle_encoder, StringView.cFromZig(marker_label));
     }
-    extern fn wgpuRenderBundleEncoderInsertDebugMarker(
-        render_bundle_encoder: RenderBundleEncoder,
-        marker_label: StringView,
-    ) void;
 
     pub fn popDebugGroup(render_bundle_encoder: RenderBundleEncoder) void {
-        wgpuRenderBundleEncoderPopDebugGroup(render_bundle_encoder);
+        c.wgpuRenderBundleEncoderPopDebugGroup(render_bundle_encoder);
     }
-    extern fn wgpuRenderBundleEncoderPopDebugGroup(render_bundle_encoder: RenderBundleEncoder) void;
 
-    pub fn pushDebugGroup(render_bundle_encoder: RenderBundleEncoder, group_label: StringView) void {
-        wgpuRenderBundleEncoderPushDebugGroup(render_bundle_encoder, group_label);
+    pub fn pushDebugGroup(render_bundle_encoder: RenderBundleEncoder, group_label: []const u8) void {
+        c.wgpuRenderBundleEncoderPushDebugGroup(render_bundle_encoder, StringView.cFromZig(group_label));
     }
-    extern fn wgpuRenderBundleEncoderPushDebugGroup(
-        render_bundle_encoder: RenderBundleEncoder,
-        group_label: StringView,
-    ) void;
 
     pub fn setBindGroup(
         render_bundle_encoder: RenderBundleEncoder,
@@ -2566,7 +2325,7 @@ pub const RenderBundleEncoder = *opaque {
         group: BindGroup,
         dynamic_offsets: ?[]const u32,
     ) void {
-        wgpuRenderBundleEncoderSetBindGroup(
+        c.wgpuRenderBundleEncoderSetBindGroup(
             render_bundle_encoder,
             group_index,
             group,
@@ -2574,13 +2333,6 @@ pub const RenderBundleEncoder = *opaque {
             if (dynamic_offsets) |dynoff| dynoff.ptr else null,
         );
     }
-    extern fn wgpuRenderBundleEncoderSetBindGroup(
-        render_bundle_encoder: RenderBundleEncoder,
-        group_index: u32,
-        group: BindGroup,
-        dynamic_offset_count: u32,
-        dynamic_offsets: ?[*]const u32,
-    ) void;
 
     pub fn setIndexBuffer(
         render_bundle_encoder: RenderBundleEncoder,
@@ -2589,31 +2341,16 @@ pub const RenderBundleEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        wgpuRenderBundleEncoderSetIndexBuffer(render_bundle_encoder, buffer, format, offset, size);
+        c.wgpuRenderBundleEncoderSetIndexBuffer(render_bundle_encoder, buffer, format, offset, size);
     }
-    extern fn wgpuRenderBundleEncoderSetIndexBuffer(
-        render_bundle_encoder: RenderBundleEncoder,
-        buffer: Buffer,
-        format: IndexFormat,
-        offset: u64,
-        size: u64,
-    ) void;
 
     pub fn setLabel(render_bundle_encoder: RenderBundleEncoder, label: []const u8) void {
-        wgpuRenderBundleEncoderSetLabel(render_bundle_encoder, StringView.fromZigStr(label));
+        c.wgpuRenderBundleEncoderSetLabel(render_bundle_encoder, StringView.cFromZig(label));
     }
-    extern fn wgpuRenderBundleEncoderSetLabel(
-        render_bundle_encoder: RenderBundleEncoder,
-        label: StringView,
-    ) void;
 
     pub fn setPipeline(render_bundle_encoder: RenderBundleEncoder, pipeline: RenderPipeline) void {
-        wgpuRenderBundleEncoderSetPipeline(render_bundle_encoder, pipeline);
+        c.wgpuRenderBundleEncoderSetPipeline(render_bundle_encoder, pipeline);
     }
-    extern fn wgpuRenderBundleEncoderSetPipeline(
-        render_bundle_encoder: RenderBundleEncoder,
-        pipeline: RenderPipeline,
-    ) void;
 
     pub fn setVertexBuffer(
         render_bundle_encoder: RenderBundleEncoder,
@@ -2622,35 +2359,22 @@ pub const RenderBundleEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        wgpuRenderBundleEncoderSetVertexBuffer(render_bundle_encoder, slot, buffer, offset, size);
+        c.wgpuRenderBundleEncoderSetVertexBuffer(render_bundle_encoder, slot, buffer, offset, size);
     }
-    extern fn wgpuRenderBundleEncoderSetVertexBuffer(
-        render_bundle_encoder: RenderBundleEncoder,
-        slot: u32,
-        buffer: Buffer,
-        offset: u64,
-        size: u64,
-    ) void;
 
     pub fn addRef(render_bundle_encoder: RenderBundleEncoder) void {
-        wgpuRenderBundleEncoderAddRef(render_bundle_encoder);
+        c.wgpuRenderBundleEncoderAddRef(render_bundle_encoder);
     }
-    extern fn wgpuRenderBundleEncoderAddRef(render_bundle_encoder: RenderBundleEncoder) void;
 
     pub fn release(render_bundle_encoder: RenderBundleEncoder) void {
-        wgpuRenderBundleEncoderRelease(render_bundle_encoder);
+        c.wgpuRenderBundleEncoderRelease(render_bundle_encoder);
     }
-    extern fn wgpuRenderBundleEncoderRelease(render_bundle_encoder: RenderBundleEncoder) void;
 };
 
 pub const RenderPassEncoder = *opaque {
     pub fn beginOcclusionQuery(render_pass_encoder: RenderPassEncoder, query_index: u32) void {
-        wgpuRenderPassEncoderBeginOcclusionQuery(render_pass_encoder, query_index);
+        c.wgpuRenderPassEncoderBeginOcclusionQuery(render_pass_encoder, query_index);
     }
-    extern fn wgpuRenderPassEncoderBeginOcclusionQuery(
-        render_pass_encoder: RenderPassEncoder,
-        query_index: u32,
-    ) void;
 
     pub fn draw(
         render_pass_encoder: RenderPassEncoder,
@@ -2659,15 +2383,14 @@ pub const RenderPassEncoder = *opaque {
         first_vertex: u32,
         first_instance: u32,
     ) void {
-        wgpuRenderPassEncoderDraw(render_pass_encoder, vertex_count, instance_count, first_vertex, first_instance);
+        c.wgpuRenderPassEncoderDraw(
+            @ptrCast(render_pass_encoder),
+            vertex_count,
+            instance_count,
+            first_vertex,
+            first_instance,
+        );
     }
-    extern fn wgpuRenderPassEncoderDraw(
-        render_pass_encoder: RenderPassEncoder,
-        vertex_count: u32,
-        instance_count: u32,
-        first_vertex: u32,
-        first_instance: u32,
-    ) void;
 
     pub fn drawIndexed(
         render_pass_encoder: RenderPassEncoder,
@@ -2677,8 +2400,8 @@ pub const RenderPassEncoder = *opaque {
         base_vertex: i32,
         first_instance: u32,
     ) void {
-        wgpuRenderPassEncoderDrawIndexed(
-            render_pass_encoder,
+        c.wgpuRenderPassEncoderDrawIndexed(
+            @ptrCast(render_pass_encoder),
             index_count,
             instance_count,
             first_index,
@@ -2686,84 +2409,50 @@ pub const RenderPassEncoder = *opaque {
             first_instance,
         );
     }
-    extern fn wgpuRenderPassEncoderDrawIndexed(
-        render_pass_encoder: RenderPassEncoder,
-        index_count: u32,
-        instance_count: u32,
-        first_index: u32,
-        base_vertex: i32,
-        first_instance: u32,
-    ) void;
 
     pub fn drawIndexedIndirect(
         render_pass_encoder: RenderPassEncoder,
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        wgpuRenderPassEncoderDrawIndexedIndirect(render_pass_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderPassEncoderDrawIndexedIndirect(render_pass_encoder, indirect_buffer, indirect_offset);
     }
-    extern fn wgpuRenderPassEncoderDrawIndexedIndirect(
-        render_pass_encoder: RenderPassEncoder,
-        indirect_buffer: Buffer,
-        indirect_offset: u64,
-    ) void;
 
     pub fn drawIndirect(
         render_pass_encoder: RenderPassEncoder,
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        wgpuRenderPassEncoderDrawIndirect(render_pass_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderPassEncoderDrawIndirect(render_pass_encoder, indirect_buffer, indirect_offset);
     }
-    extern fn wgpuRenderPassEncoderDrawIndirect(
-        render_pass_encoder: RenderPassEncoder,
-        indirect_buffer: Buffer,
-        indirect_offset: u64,
-    ) void;
 
     pub fn end(render_pass_encoder: RenderPassEncoder) void {
-        wgpuRenderPassEncoderEnd(render_pass_encoder);
+        c.wgpuRenderPassEncoderEnd(@ptrCast(render_pass_encoder));
     }
-    extern fn wgpuRenderPassEncoderEnd(render_pass_encoder: RenderPassEncoder) void;
 
     pub fn endOcclusionQuery(render_pass_encoder: RenderPassEncoder) void {
-        wgpuRenderPassEncoderEndOcclusionQuery(render_pass_encoder);
+        c.wgpuRenderPassEncoderEndOcclusionQuery(render_pass_encoder);
     }
-    extern fn wgpuRenderPassEncoderEndOcclusionQuery(render_pass_encoder: RenderPassEncoder) void;
 
     pub fn executeBundles(
         render_pass_encoder: RenderPassEncoder,
         bundle_count: u32,
         bundles: [*]const RenderBundle,
     ) void {
-        wgpuRenderPassEncoderExecuteBundles(render_pass_encoder, bundle_count, bundles);
+        c.wgpuRenderPassEncoderExecuteBundles(render_pass_encoder, bundle_count, bundles);
     }
-    extern fn wgpuRenderPassEncoderExecuteBundles(
-        render_pass_encoder: RenderPassEncoder,
-        bundle_count: u32,
-        bundles: [*]const RenderBundle,
-    ) void;
 
-    pub fn insertDebugMarker(render_pass_encoder: RenderPassEncoder, marker_label: StringView) void {
-        wgpuRenderPassEncoderInsertDebugMarker(render_pass_encoder, marker_label);
+    pub fn insertDebugMarker(render_pass_encoder: RenderPassEncoder, marker_label: []const u8) void {
+        c.wgpuRenderPassEncoderInsertDebugMarker(render_pass_encoder, StringView.cFromZig(marker_label));
     }
-    extern fn wgpuRenderPassEncoderInsertDebugMarker(
-        render_pass_encoder: RenderPassEncoder,
-        marker_label: StringView,
-    ) void;
 
     pub fn popDebugGroup(render_pass_encoder: RenderPassEncoder) void {
-        wgpuRenderPassEncoderPopDebugGroup(render_pass_encoder);
+        c.wgpuRenderPassEncoderPopDebugGroup(render_pass_encoder);
     }
-    extern fn wgpuRenderPassEncoderPopDebugGroup(render_pass_encoder: RenderPassEncoder) void;
 
-    pub fn pushDebugGroup(render_pass_encoder: RenderPassEncoder, group_label: StringView) void {
-        wgpuRenderPassEncoderPushDebugGroup(render_pass_encoder, group_label);
+    pub fn pushDebugGroup(render_pass_encoder: RenderPassEncoder, group_label: []const u8) void {
+        c.wgpuRenderPassEncoderPushDebugGroup(render_pass_encoder, StringView.cFromZig(group_label));
     }
-    extern fn wgpuRenderPassEncoderPushDebugGroup(
-        render_pass_encoder: RenderPassEncoder,
-        group_label: StringView,
-    ) void;
 
     pub fn setBindGroup(
         render_pass_encoder: RenderPassEncoder,
@@ -2771,29 +2460,18 @@ pub const RenderPassEncoder = *opaque {
         group: BindGroup,
         dynamic_offsets: ?[]const u32,
     ) void {
-        wgpuRenderPassEncoderSetBindGroup(
-            render_pass_encoder,
+        c.wgpuRenderPassEncoderSetBindGroup(
+            @ptrCast(render_pass_encoder),
             group_index,
             group,
             if (dynamic_offsets) |dynoff| @as(u32, @intCast(dynoff.len)) else 0,
             if (dynamic_offsets) |dynoff| dynoff.ptr else null,
         );
     }
-    extern fn wgpuRenderPassEncoderSetBindGroup(
-        render_pass_encoder: RenderPassEncoder,
-        group_index: u32,
-        group: BindGroup,
-        dynamic_offset_count: u32,
-        dynamic_offsets: ?[*]const u32,
-    ) void;
 
     pub fn setBlendConstant(render_pass_encoder: RenderPassEncoder, color: Color) void {
-        wgpuRenderPassEncoderSetBlendConstant(render_pass_encoder, &color);
+        c.wgpuRenderPassEncoderSetBlendConstant(render_pass_encoder, &color);
     }
-    extern fn wgpuRenderPassEncoderSetBlendConstant(
-        render_pass_encoder: RenderPassEncoder,
-        color: *const Color,
-    ) void;
 
     pub fn setIndexBuffer(
         render_pass_encoder: RenderPassEncoder,
@@ -2802,28 +2480,16 @@ pub const RenderPassEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        wgpuRenderPassEncoderSetIndexBuffer(render_pass_encoder, buffer, format, offset, size);
+        c.wgpuRenderPassEncoderSetIndexBuffer(@ptrCast(render_pass_encoder), buffer, format, offset, size);
     }
-    extern fn wgpuRenderPassEncoderSetIndexBuffer(
-        render_pass_encoder: RenderPassEncoder,
-        buffer: Buffer,
-        format: IndexFormat,
-        offset: u64,
-        size: u64,
-    ) void;
 
     pub fn setLabel(render_pass_encoder: RenderPassEncoder, label: []const u8) void {
-        wgpuRenderPassEncoderSetLabel(render_pass_encoder, StringView.fromZigStr(label));
+        c.wgpuRenderPassEncoderSetLabel(@ptrCast(render_pass_encoder), StringView.cFromZig(label));
     }
-    extern fn wgpuRenderPassEncoderSetLabel(render_pass_encoder: RenderPassEncoder, label: StringView) void;
 
     pub fn setPipeline(render_pass_encoder: RenderPassEncoder, pipeline: RenderPipeline) void {
-        wgpuRenderPassEncoderSetPipeline(render_pass_encoder, pipeline);
+        c.wgpuRenderPassEncoderSetPipeline(@ptrCast(render_pass_encoder), pipeline);
     }
-    extern fn wgpuRenderPassEncoderSetPipeline(
-        render_pass_encoder: RenderPassEncoder,
-        pipeline: RenderPipeline,
-    ) void;
 
     pub fn setScissorRect(
         render_pass_encoder: RenderPassEncoder,
@@ -2832,20 +2498,12 @@ pub const RenderPassEncoder = *opaque {
         width: u32,
         height: u32,
     ) void {
-        wgpuRenderPassEncoderSetScissorRect(render_pass_encoder, x, y, width, height);
+        c.wgpuRenderPassEncoderSetScissorRect(render_pass_encoder, x, y, width, height);
     }
-    extern fn wgpuRenderPassEncoderSetScissorRect(
-        render_pass_encoder: RenderPassEncoder,
-        x: u32,
-        y: u32,
-        width: u32,
-        height: u32,
-    ) void;
 
     pub fn setStencilReference(render_pass_encoder: RenderPassEncoder, ref: u32) void {
-        wgpuRenderPassEncoderSetStencilReference(render_pass_encoder, ref);
+        c.wgpuRenderPassEncoderSetStencilReference(render_pass_encoder, ref);
     }
-    extern fn wgpuRenderPassEncoderSetStencilReference(render_pass_encoder: RenderPassEncoder, ref: u32) void;
 
     pub fn setVertexBuffer(
         render_pass_encoder: RenderPassEncoder,
@@ -2854,15 +2512,8 @@ pub const RenderPassEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        wgpuRenderPassEncoderSetVertexBuffer(render_pass_encoder, slot, buffer, offset, size);
+        c.wgpuRenderPassEncoderSetVertexBuffer(@ptrCast(render_pass_encoder), slot, buffer, offset, size);
     }
-    extern fn wgpuRenderPassEncoderSetVertexBuffer(
-        render_pass_encoder: RenderPassEncoder,
-        slot: u32,
-        buffer: Buffer,
-        offset: u64,
-        size: u64,
-    ) void;
 
     pub fn setViewport(
         render_pass_encoder: RenderPassEncoder,
@@ -2873,82 +2524,56 @@ pub const RenderPassEncoder = *opaque {
         min_depth: f32,
         max_depth: f32,
     ) void {
-        wgpuRenderPassEncoderSetViewport(render_pass_encoder, x, y, width, height, min_depth, max_depth);
+        c.wgpuRenderPassEncoderSetViewport(render_pass_encoder, x, y, width, height, min_depth, max_depth);
     }
-    extern fn wgpuRenderPassEncoderSetViewport(
-        render_pass_encoder: RenderPassEncoder,
-        x: f32,
-        y: f32,
-        width: f32,
-        height: f32,
-        min_depth: f32,
-        max_depth: f32,
-    ) void;
 
     pub fn writeTimestamp(
         render_pass_encoder: RenderPassEncoder,
         query_set: QuerySet,
         query_index: u32,
     ) void {
-        wgpuRenderPassEncoderWriteTimestamp(render_pass_encoder, query_set, query_index);
+        c.wgpuRenderPassEncoderWriteTimestamp(render_pass_encoder, query_set, query_index);
     }
-    extern fn wgpuRenderPassEncoderWriteTimestamp(
-        render_pass_encoder: RenderPassEncoder,
-        query_set: QuerySet,
-        query_index: u32,
-    ) void;
 
     pub fn addRef(render_pass_encoder: RenderPassEncoder) void {
-        wgpuRenderPassEncoderAddRef(render_pass_encoder);
+        c.wgpuRenderPassEncoderAddRef(render_pass_encoder);
     }
-    extern fn wgpuRenderPassEncoderAddRef(render_pass_encoder: RenderPassEncoder) void;
 
     pub fn release(render_pass_encoder: RenderPassEncoder) void {
-        wgpuRenderPassEncoderRelease(render_pass_encoder);
+        c.wgpuRenderPassEncoderRelease(@ptrCast(render_pass_encoder));
     }
-    extern fn wgpuRenderPassEncoderRelease(render_pass_encoder: RenderPassEncoder) void;
 };
 
 pub const RenderPipeline = *opaque {
     pub fn getBindGroupLayout(render_pipeline: RenderPipeline, group_index: u32) BindGroupLayout {
-        return wgpuRenderPipelineGetBindGroupLayout(render_pipeline, group_index);
+        return c.wgpuRenderPipelineGetBindGroupLayout(@ptrCast(render_pipeline), group_index);
     }
-    extern fn wgpuRenderPipelineGetBindGroupLayout(
-        render_pipeline: RenderPipeline,
-        group_index: u32,
-    ) BindGroupLayout;
 
     pub fn setLabel(render_pipeline: RenderPipeline, label: []const u8) void {
-        wgpuRenderPipelineSetLabel(render_pipeline, StringView.fromZigStr(label));
+        c.wgpuRenderPipelineSetLabel(@ptrCast(render_pipeline), StringView.cFromZig(label));
     }
-    extern fn wgpuRenderPipelineSetLabel(render_pipeline: RenderPipeline, label: StringView) void;
 
     pub fn addRef(render_pipeline: RenderPipeline) void {
-        wgpuRenderPipelineAddRef(render_pipeline);
+        c.wgpuRenderPipelineAddRef(@ptrCast(render_pipeline));
     }
-    extern fn wgpuRenderPipelineAddRef(render_pipeline: RenderPipeline) void;
 
     pub fn release(render_pipeline: RenderPipeline) void {
-        wgpuRenderPipelineRelease(render_pipeline);
+        c.wgpuRenderPipelineRelease(@ptrCast(render_pipeline));
     }
-    extern fn wgpuRenderPipelineRelease(render_pipeline: RenderPipeline) void;
 };
 
 pub const Sampler = *opaque {
     pub fn setLabel(sampler: Sampler, label: []const u8) void {
-        wgpuSamplerSetLabel(sampler, StringView.fromZigStr(label));
+        c.wgpuSamplerSetLabel(@ptrCast(sampler), StringView.cFromZig(label));
     }
-    extern fn wgpuSamplerSetLabel(sampler: Sampler, label: StringView) void;
 
     pub fn addRef(sampler: Sampler) void {
-        wgpuSamplerAddRef(sampler);
+        c.wgpuSamplerAddRef(@ptrCast(sampler));
     }
-    extern fn wgpuSamplerAddRef(sampler: Sampler) void;
 
     pub fn release(sampler: Sampler) void {
-        wgpuSamplerRelease(sampler);
+        c.wgpuSamplerRelease(@ptrCast(sampler));
     }
-    extern fn wgpuSamplerRelease(sampler: Sampler) void;
 };
 
 pub const ShaderModule = *opaque {
@@ -2957,28 +2582,20 @@ pub const ShaderModule = *opaque {
         callback: CompilationInfoCallback,
         userdata: ?*anyopaque,
     ) void {
-        wgpuShaderModuleGetCompilationInfo(shader_module, callback, userdata);
+        c.wgpuShaderModuleGetCompilationInfo(@ptrCast(shader_module), callback, userdata);
     }
-    extern fn wgpuShaderModuleGetCompilationInfo(
-        shader_module: ShaderModule,
-        callback: CompilationInfoCallback,
-        userdata: ?*anyopaque,
-    ) void;
 
     pub fn setLabel(shader_module: ShaderModule, label: []const u8) void {
-        wgpuShaderModuleSetLabel(shader_module, StringView.fromZigStr(label));
+        c.wgpuShaderModuleSetLabel(@ptrCast(shader_module), StringView.cFromZig(label));
     }
-    extern fn wgpuShaderModuleSetLabel(shader_module: ShaderModule, label: StringView) void;
 
     pub fn addRef(shader_module: ShaderModule) void {
-        wgpuShaderModuleAddRef(shader_module);
+        c.wgpuShaderModuleAddRef(@ptrCast(shader_module));
     }
-    extern fn wgpuShaderModuleAddRef(shader_module: ShaderModule) void;
 
     pub fn release(shader_module: ShaderModule) void {
-        wgpuShaderModuleRelease(shader_module);
+        c.wgpuShaderModuleRelease(@ptrCast(shader_module));
     }
-    extern fn wgpuShaderModuleRelease(shader_module: ShaderModule) void;
 };
 
 pub const Surface = *opaque {
@@ -2986,106 +2603,66 @@ pub const Surface = *opaque {
         surface: Surface,
         config: SurfaceConfiguration,
     ) void {
-        wgpuSurfaceConfigure(surface, &config);
+        c.wgpuSurfaceConfigure(@ptrCast(surface), @ptrCast(&config));
     }
-    extern fn wgpuSurfaceConfigure(surface: Surface, config: *const SurfaceConfiguration) void;
 
     pub fn getCurrentTexture(surface: Surface, surface_texture: *SurfaceTexture) void {
-        wgpuSurfaceGetCurrentTexture(surface, surface_texture);
+        c.wgpuSurfaceGetCurrentTexture(@ptrCast(surface), @ptrCast(surface_texture));
     }
-    extern fn wgpuSurfaceGetCurrentTexture(Surface, *SurfaceTexture) void;
 
     pub fn present(surface: Surface) Status {
-        return wgpuSurfacePresent(surface);
+        return @enumFromInt(c.wgpuSurfacePresent(@ptrCast(surface)));
     }
-    extern fn wgpuSurfacePresent(surface: Surface) Status;
 
     pub fn addRef(surface: Surface) void {
-        wgpuSurfaceAddRef(surface);
+        c.wgpuSurfaceAddRef(@ptrCast(surface));
     }
-    extern fn wgpuSurfaceAddRef(surface: Surface) void;
 
     pub fn release(surface: Surface) void {
-        wgpuSurfaceRelease(surface);
+        c.wgpuSurfaceRelease(@ptrCast(surface));
     }
-    extern fn wgpuSurfaceRelease(surface: Surface) void;
 };
 
 pub const Texture = *opaque {
     pub fn createView(texture: Texture, descriptor: TextureViewDescriptor) TextureView {
-        return wgpuTextureCreateView(texture, &descriptor);
+        return @ptrCast(c.wgpuTextureCreateView(@ptrCast(texture), @ptrCast(&descriptor)));
     }
-    extern fn wgpuTextureCreateView(texture: Texture, descriptor: *const TextureViewDescriptor) TextureView;
 
     pub fn destroy(texture: Texture) void {
-        wgpuTextureDestroy(texture);
+        c.wgpuTextureDestroy(@ptrCast(texture));
     }
-    extern fn wgpuTextureDestroy(texture: Texture) void;
 
     pub fn setLabel(texture: Texture, label: []const u8) void {
-        wgpuTextureSetLabel(texture, StringView.fromZigStr(label));
+        c.wgpuTextureSetLabel(@ptrCast(texture), StringView.cFromZig(label));
     }
-    extern fn wgpuTextureSetLabel(texture: Texture, label: StringView) void;
 
     pub fn getWidth(texture: Texture) u32 {
-        return wgpuTextureGetWidth(texture);
+        return c.wgpuTextureGetWidth(@ptrCast(texture));
     }
-    extern fn wgpuTextureGetWidth(Texture) u32;
 
     pub fn getHeight(texture: Texture) u32 {
-        return wgpuTextureGetHeight(texture);
+        return c.wgpuTextureGetHeight(@ptrCast(texture));
     }
-    extern fn wgpuTextureGetHeight(Texture) u32;
 
     pub fn addRef(texture: Texture) void {
-        wgpuTextureAddRef(texture);
+        c.wgpuTextureAddRef(@ptrCast(texture));
     }
-    extern fn wgpuTextureAddRef(texture: Texture) void;
 
     pub fn release(texture: Texture) void {
-        wgpuTextureRelease(texture);
+        c.wgpuTextureRelease(@ptrCast(texture));
     }
-    extern fn wgpuTextureRelease(texture: Texture) void;
 };
 
 pub const TextureView = *opaque {
     pub fn setLabel(texture_view: TextureView, label: []const u8) void {
-        wgpuTextureViewSetLabel(texture_view, StringView.fromZigStr(label));
+        c.wgpuTextureViewSetLabel(@ptrCast(texture_view), StringView.cFromZig(label));
     }
-    extern fn wgpuTextureViewSetLabel(texture_view: TextureView, label: StringView) void;
 
     pub fn addRef(texture_view: TextureView) void {
-        wgpuTextureViewAddRef(texture_view);
+        c.wgpuTextureViewAddRef(@ptrCast(texture_view));
     }
-    extern fn wgpuTextureViewAddRef(texture_view: TextureView) void;
 
     pub fn release(texture_view: TextureView) void {
-        wgpuTextureViewRelease(texture_view);
+        c.wgpuTextureViewRelease(@ptrCast(texture_view));
     }
-    extern fn wgpuTextureViewRelease(texture_view: TextureView) void;
 };
-
-//
-// Section
-//
-
-
-pub const InstanceFeatureName = enum(u32) {
-    timed_wait_any = 0x00000001,
-    shader_source_spirv = 0x00000002,
-    multiple_devices_per_adapter = 0x00000003,
-};
-pub const InstanceLimits = extern struct {
-    next_in_chain: ?*ChainedStructOut = null,
-    timed_wait_any_max_count: usize,
-};
-pub const InstanceDescriptor = extern struct {
-    next_in_chain: ?*const ChainedStruct = null,
-    required_feature_count: usize = 0,
-    required_features: ?*const InstanceFeatureName = null,
-    required_limits: ?*const InstanceLimits = null,
-};
-pub inline fn createInstance(desc: ?InstanceDescriptor) Instance {
-    return wgpuCreateInstance(if(desc) |d| &d else null);
-}
-extern fn wgpuCreateInstance(desc: ?*const InstanceDescriptor) Instance;

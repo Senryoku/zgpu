@@ -88,6 +88,7 @@ pub const GraphicsContext = struct {
     adapter: wgpu.Adapter,
     device: wgpu.Device,
     surface: wgpu.Surface,
+    present_mode: wgpu.PresentMode,
 
     queue: wgpu.Queue,
     buffer_pool: BufferPool,
@@ -137,12 +138,14 @@ pub const GraphicsContext = struct {
                 fn callback(
                     status: wgpu.RequestAdapterStatus,
                     adapter: wgpu.Adapter,
-                    message: wgpu.StringView,
+                    message: wgpu.StringView.C,
                     userdata_1: ?*anyopaque,
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
                     _ = userdata_2;
-                    if (status != .success) std.log.err("Adapter: {s}", .{message.zigStr() orelse "no message"});
+                    if (status != .success) std.log.err("Adapter Error: {s}", .{
+                        wgpu.StringView.zigFromC(message) orelse "no message"
+                    });
                     const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.adapter = adapter;
@@ -161,11 +164,9 @@ pub const GraphicsContext = struct {
                 .userdata_1 = @ptrCast(&response),
             };
 
-            var futures = [_]wgpu.FutureWaitInfo{
-                .{
-                    .future = instance.requestAdapter(adapter_options, callback_info),
-                },
-            };
+            var futures = [_]wgpu.FutureWaitInfo{.{
+                .future = instance.requestAdapter(adapter_options, callback_info),
+            }};
             const adapter_wait_status = instance.waitAny(&futures, 0);
             if (adapter_wait_status != .success) {
                 std.log.err("Failed to wait for GPU adapter request (status: {s}).", .{@tagName(adapter_wait_status)});
@@ -189,19 +190,22 @@ pub const GraphicsContext = struct {
         errdefer adapter.release();
 
         var adapter_info = wgpu.AdapterInfo{};
-        adapter.getInfo(&adapter_info);
-
-        // if (emscripten) {
-        //     properties.name = "emscripten";
-        //     properties.driver_description = "emscripten";
-        //     properties.adapter_type = .unknown;
-        //     properties.backend_type = .undef;
-        // }
-        std.log.info("[zgpu] High-performance device has been selected:", .{});
-        std.log.info("[zgpu]   Device: {s}", .{ adapter_info.device.zigStr() orelse "no info" });
-        std.log.info("[zgpu]   Driver: {s}", .{ adapter_info.description.zigStr() orelse "no info" });
-        std.log.info("[zgpu]   Adapter type: {s}", .{ @tagName(adapter_info.adapter_type) });
-        std.log.info("[zgpu]   Backend type: {s}", .{ @tagName(adapter_info.backend_type) });
+        const get_info_status = adapter.getInfo(&adapter_info);
+        if (get_info_status == .success) {
+            // if (emscripten) {
+            //     properties.name = "emscripten";
+            //     properties.driver_description = "emscripten";
+            //     properties.adapter_type = .unknown;
+            //     properties.backend_type = .undef;
+            // }
+            std.log.info("[zgpu] High-performance device has been selected:", .{});
+            std.log.info("[zgpu]   Device: {s}", .{ wgpu.StringView.zigFromC(adapter_info.device) orelse "N/A" });
+            std.log.info("[zgpu]   Driver: {s}", .{ wgpu.StringView.zigFromC(adapter_info.description) orelse "N/A" });
+            std.log.info("[zgpu]   Adapter type: {s}", .{ @tagName(adapter_info.adapter_type) });
+            std.log.info("[zgpu]   Backend type: {s}", .{ @tagName(adapter_info.backend_type) });
+        } else {
+            std.log.err("[zgpu] Failed to get adapter info.", .{});
+        }
 
         const device = device: {
             const Response = struct {
@@ -213,12 +217,14 @@ pub const GraphicsContext = struct {
                 fn callback(
                     status: wgpu.RequestDeviceStatus,
                     device: wgpu.Device,
-                    message: wgpu.StringView,
+                    message: wgpu.StringView.C,
                     userdata_1: ?*anyopaque,
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
                     _ = userdata_2;
-                    if (status != .success) std.log.err("Device: {s}", .{message.zigStr() orelse "no message"});
+                    if (status != .success) std.log.err("Device Error: {s}", .{
+                        wgpu.StringView.zigFromC(message) orelse "no message"
+                    });
                     const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.device = device;
@@ -229,7 +235,7 @@ pub const GraphicsContext = struct {
                 fn callback(
                     device: *const wgpu.Device,
                     reason: wgpu.DeviceLostReason,
-                    message: wgpu.StringView,
+                    message: wgpu.StringView.C,
                     userdata_1: ?*anyopaque,
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
@@ -238,7 +244,7 @@ pub const GraphicsContext = struct {
                     _ = userdata_2;
                     std.log.err("Device lost:\n\tReason: {s}\n\tMessage: {s}", .{
                         @tagName(reason),
-                        message.zigStr() orelse "no message"
+                        wgpu.StringView.zigFromC(message) orelse "no message"
                     });
                 }
             }).callback;
@@ -247,7 +253,7 @@ pub const GraphicsContext = struct {
                 fn callback(
                     device: *const wgpu.Device,
                     err_type: wgpu.ErrorType,
-                    message: wgpu.StringView,
+                    message: wgpu.StringView.C,
                     userdata_1: ?*anyopaque,
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
@@ -256,7 +262,7 @@ pub const GraphicsContext = struct {
                     _ = userdata_2;
                     std.log.err("Uncaptured Error:\n\tError Type: {s}\n\tMessage: {s}", .{
                         @tagName(err_type),
-                        message.zigStr() orelse "no message"
+                        wgpu.StringView.zigFromC(message) orelse "no message"
                     });
                 }
             }).callback;
@@ -299,11 +305,9 @@ pub const GraphicsContext = struct {
                 .userdata_2 = null,
             };
 
-            var futures = [_]wgpu.FutureWaitInfo{
-                .{
-                    .future = adapter.requestDevice(device_descriptor, callback_info),
-                },
-            };
+            var futures = [_]wgpu.FutureWaitInfo{.{
+                .future = adapter.requestDevice(device_descriptor, callback_info),
+            }};
             const device_wait_status = instance.waitAny(&futures, 0);
             if (device_wait_status != .success) {
                 std.log.err("Failed to wait for GPU device request (status: {s}).", .{@tagName(device_wait_status)});
@@ -340,6 +344,7 @@ pub const GraphicsContext = struct {
             .usage = .{ .render_attachment = true },
             .width = @intCast(framebuffer_size[0]),
             .height = @intCast(framebuffer_size[1]),
+            .present_mode = options.present_mode,
         };
         surface.configure(surface_configuration);
 
@@ -350,6 +355,7 @@ pub const GraphicsContext = struct {
             .instance = instance,
             .adapter = adapter,
             .device = device,
+            .present_mode = options.present_mode,
             .queue = device.getQueue(),
             .surface = surface,
             .buffer_pool = BufferPool.init(allocator, zgpu_options.buffer_pool_size),
@@ -587,6 +593,7 @@ pub const GraphicsContext = struct {
             .usage = .{ .render_attachment = true },
             .width = @intCast(framebuffer_size[0]),
             .height = @intCast(framebuffer_size[1]),
+            .present_mode = gctx.present_mode,
         };
         gctx.surface.configure(surface_configuration);
 
@@ -738,7 +745,7 @@ pub const GraphicsContext = struct {
         fn create(
             status: wgpu.CreatePipelineAsyncStatus,
             pipeline: wgpu.RenderPipeline,
-            message: wgpu.StringView,
+            message: wgpu.StringView.C,
             userdata: ?*anyopaque,
         ) callconv(.C) void {
             const op = @as(*AsyncCreateOpRender, @ptrCast(@alignCast(userdata)));
@@ -750,7 +757,7 @@ pub const GraphicsContext = struct {
             } else {
                 std.log.err(
                     "[zgpu] Failed to async create render pipeline (status: {s}, message: {s}).",
-                    .{ @tagName(status), message.zigStr() orelse "no message" },
+                    .{ @tagName(status), wgpu.StringView.zigFromC(message) orelse "no message" },
                 );
             }
             op.allocator.destroy(op);
@@ -799,7 +806,7 @@ pub const GraphicsContext = struct {
         fn create(
             status: wgpu.CreatePipelineAsyncStatus,
             pipeline: wgpu.ComputePipeline,
-            message: wgpu.StringView,
+            message: wgpu.StringView.C,
             userdata: ?*anyopaque,
         ) callconv(.C) void {
             const op = @as(*AsyncCreateOpCompute, @ptrCast(@alignCast(userdata)));
@@ -811,7 +818,7 @@ pub const GraphicsContext = struct {
             } else {
                 std.log.err(
                     "[zgpu] Failed to async create compute pipeline (status: {s}, message: {s}).",
-                    .{ @tagName(status), message.zigStr() orelse "no message" },
+                    .{ @tagName(status), wgpu.StringView.zigFromC(message) orelse "no message" },
                 );
             }
             op.allocator.destroy(op);
@@ -1110,7 +1117,7 @@ pub const GraphicsContext = struct {
             mipgen.pipeline = gctx.createComputePipeline(pipeline_layout, .{
                 .compute = .{
                     .module = cs_module,
-                    .entry_point = wgpu.StringView.fromZigStr("main"),
+                    .entry_point = wgpu.StringView.cFromZig("main"),
                 },
             });
 
@@ -1343,13 +1350,13 @@ pub fn createRenderPipelineSimple(
     const pipe_desc = wgpu.RenderPipelineDescriptor{
         .vertex = wgpu.VertexState{
             .module = vs_mod,
-            .entry_point = wgpu.StringView.fromZigStr("main"),
+            .entry_point = wgpu.StringView.cFromZig("main"),
             .buffer_count = if (vertex_buffers) |vbs| vbs.len else 0,
             .buffers = if (vertex_buffers) |vbs| &vbs else null,
         },
         .fragment = &wgpu.FragmentState{
             .module = fs_mod,
-            .entry_point = wgpu.StringView.fromZigStr("main"),
+            .entry_point = wgpu.StringView.cFromZig("main"),
             .target_count = color_targets.len,
             .targets = &color_targets,
         },
@@ -1414,11 +1421,11 @@ pub fn createWgslShaderModule(
 ) wgpu.ShaderModule {
     const wgsl_source = wgpu.ShaderSourceWGSL{
         .chain = .{ .next = null, .struct_type = .shader_source_wgsl },
-        .code = wgpu.StringView.fromZigStr(source),
+        .code = wgpu.StringView.cFromZig(source),
     };
     const desc = wgpu.ShaderModuleDescriptor{
         .next_in_chain = @ptrCast(&wgsl_source),
-        .label = if (label) |l| wgpu.StringView.fromZigStr(l) else .{},
+        .label = if (label) |l| wgpu.StringView.cFromZig(l) else .{},
     };
     return device.createShaderModule(desc);
 }
@@ -1808,7 +1815,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.layer = src.layer;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.fromZigStr(src.label),
+                .label = wgpu.StringView.cFromZig(src.label),
             });
         },
         .windows_hwnd => |src| blk: {
@@ -1819,7 +1826,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.hwnd = src.hwnd;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.fromZigStr(src.label),
+                .label = wgpu.StringView.cFromZig(src.label),
             });
         },
         .xlib => |src| blk: {
@@ -1830,7 +1837,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.window = src.window;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.fromZigStr(src.label),
+                .label = wgpu.StringView.cFromZig(src.label),
             });
         },
         .wayland => |src| blk: {
@@ -1841,7 +1848,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.surface = src.surface;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.fromZigStr(src.label),
+                .label = wgpu.StringView.cFromZig(src.label),
             });
         },
         // .canvas_html => |src| blk: {
