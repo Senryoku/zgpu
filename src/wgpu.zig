@@ -451,7 +451,7 @@ pub const SurfaceSourceWindowsSwapChainPanel = extern struct {
 
 pub const SurfaceSourceCanvasHTMLSelector = extern struct {
     chain: ChainedStruct,
-    selector: [*:0]const u8,
+    selector: StringView,
 };
 
 pub const StructType = enum(u32) {
@@ -832,7 +832,7 @@ pub const BindGroupEntry = extern struct {
 
 pub const BindGroupDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     layout: BindGroupLayout,
     entry_count: usize,
     entries: ?[*]const BindGroupEntry,
@@ -876,7 +876,7 @@ pub const BindGroupLayoutEntry = extern struct {
 
 pub const BindGroupLayoutDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     entry_count: usize,
     entries: ?[*]const BindGroupLayoutEntry,
 };
@@ -888,7 +888,7 @@ pub const U32Bool = enum(u32) {
 
 pub const BufferDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     usage: BufferUsage,
     size: u64,
     mapped_at_creation: U32Bool = .false,
@@ -896,33 +896,33 @@ pub const BufferDescriptor = extern struct {
 
 pub const CommandEncoderDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
 };
 
 pub const ConstantEntry = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    key: [*:0]const u8,
+    key: StringView,
     value: f64,
 };
 
 pub const ProgrammableStageDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: [*:0]const u8,
+    entry_point: StringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
 };
 
 pub const ComputePipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     layout: ?PipelineLayout = null,
     compute: ProgrammableStageDescriptor,
 };
 
 pub const ExternalTextureDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     plane0: TextureView,
     plane1: ?TextureView = null,
     visible_origin: Origin2D,
@@ -938,14 +938,14 @@ pub const ExternalTextureDescriptor = extern struct {
 
 pub const PipelineLayoutDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     bind_group_layout_count: usize,
     bind_group_layouts: ?[*]const BindGroupLayout,
 };
 
 pub const QuerySetDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     query_type: QueryType,
     count: u32,
     pipeline_statistics: ?[*]const PipelineStatisticName,
@@ -954,7 +954,7 @@ pub const QuerySetDescriptor = extern struct {
 
 pub const RenderBundleEncoderDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     color_formats_count: usize,
     color_formats: ?[*]const TextureFormat,
     depth_stencil_format: TextureFormat,
@@ -979,7 +979,7 @@ pub const VertexBufferLayout = extern struct {
 pub const VertexState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: [*:0]const u8,
+    entry_point: StringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
     buffer_count: usize = 0,
@@ -1007,7 +1007,7 @@ pub const ColorTargetState = extern struct {
 pub const FragmentState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: [*:0]const u8,
+    entry_point: StringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
     target_count: usize = 0,
@@ -1052,7 +1052,7 @@ pub const MultisampleState = extern struct {
 
 pub const RenderPipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     layout: ?PipelineLayout = null,
     vertex: VertexState,
     primitive: PrimitiveState = .{},
@@ -1063,7 +1063,7 @@ pub const RenderPipelineDescriptor = extern struct {
 
 pub const SamplerDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     address_mode_u: AddressMode = .clamp_to_edge,
     address_mode_v: AddressMode = .clamp_to_edge,
     address_mode_w: AddressMode = .clamp_to_edge,
@@ -1118,7 +1118,7 @@ pub const Extent3D = extern struct {
 
 pub const TextureDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     usage: TextureUsage,
     dimension: TextureDimension = .tdim_2d,
     size: Extent3D,
@@ -1238,7 +1238,7 @@ pub const RenderPassTimestampWrite = extern struct {
 
 pub const ComputePassDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     timestamp_write_count: usize,
     timestamp_writes: ?[*]const ComputePassTimestampWrite,
 };
@@ -1284,7 +1284,7 @@ pub const RenderPassDepthStencilAttachment = extern struct {
 
 pub const RenderPassDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     color_attachment_count: usize,
     color_attachments: ?[*]const RenderPassColorAttachment,
     depth_stencil_attachment: ?*const RenderPassDepthStencilAttachment = null,
@@ -1334,7 +1334,7 @@ pub const ImageCopyExternalTexture = extern struct {
 
 pub const CommandBufferDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
 };
 
 // pub const CopyTextureForBrowserOptions = extern struct {
@@ -1351,7 +1351,7 @@ pub const CommandBufferDescriptor = extern struct {
 
 pub const TextureViewDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
     format: TextureFormat = .undef,
     dimension: TextureViewDimension = .undef,
     base_mip_level: u32 = 0,
@@ -1363,7 +1363,7 @@ pub const TextureViewDescriptor = extern struct {
 
 pub const CompilationMessage = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    message: ?[*:0]const u8 = null,
+    message: StringView = .{},
     message_type: CompilationMessageType,
     line_num: u64,
     line_pos: u64,
@@ -1382,32 +1382,32 @@ pub const CompilationInfo = extern struct {
 
 pub const RenderBundleDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: ?[*:0]const u8 = null,
+    label: StringView = .{},
 };
 
 pub const CreateComputePipelineAsyncCallback = *const fn (
     status: CreatePipelineAsyncStatus,
     pipeline: ComputePipeline,
-    message: ?[*:0]const u8,
+    message: StringView,
     userdata: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const CreateRenderPipelineAsyncCallback = *const fn (
     status: CreatePipelineAsyncStatus,
     pipeline: RenderPipeline,
-    message: ?[*:0]const u8,
+    message: StringView,
     userdata: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const ErrorCallback = *const fn (
     err_type: ErrorType,
-    message: ?[*:0]const u8,
+    message: StringView,
     userdata: ?*anyopaque,
 ) callconv(.C) void;
 
 pub const LoggingCallback = *const fn (
     log_type: LoggingType,
-    message: ?[*:0]const u8,
+    message: StringView,
     userdata: ?*anyopaque,
 ) callconv(.C) void;
 
@@ -1501,10 +1501,10 @@ pub const Adapter = *opaque {
 };
 
 pub const BindGroup = *opaque {
-    pub fn setLabel(bind_group: BindGroup, label: ?[*:0]const u8) void {
-        wgpuBindGroupSetLabel(bind_group, label);
+    pub fn setLabel(bind_group: BindGroup, label: []const u8) void {
+        wgpuBindGroupSetLabel(bind_group, StringView.fromZigStr(label));
     }
-    extern fn wgpuBindGroupSetLabel(bind_group: BindGroup, label: ?[*:0]const u8) void;
+    extern fn wgpuBindGroupSetLabel(bind_group: BindGroup, label: StringView) void;
 
     pub fn addRef(bind_group: BindGroup) void {
         wgpuBindGroupAddRef(bind_group);
@@ -1518,10 +1518,10 @@ pub const BindGroup = *opaque {
 };
 
 pub const BindGroupLayout = *opaque {
-    pub fn setLabel(bind_group_layout: BindGroupLayout, label: ?[*:0]const u8) void {
-        wgpuBindGroupLayoutSetLabel(bind_group_layout, label);
+    pub fn setLabel(bind_group_layout: BindGroupLayout, label: []const u8) void {
+        wgpuBindGroupLayoutSetLabel(bind_group_layout, StringView.fromZigStr(label));
     }
-    extern fn wgpuBindGroupLayoutSetLabel(bind_group_layout: BindGroupLayout, label: ?[*:0]const u8) void;
+    extern fn wgpuBindGroupLayoutSetLabel(bind_group_layout: BindGroupLayout, label: StringView) void;
 
     pub fn addRef(bind_group_layout: BindGroupLayout) void {
         wgpuBindGroupLayoutAddRef(bind_group_layout);
@@ -1596,10 +1596,10 @@ pub const Buffer = *opaque {
         userdata: ?*anyopaque,
     ) void;
 
-    pub fn setLabel(buffer: Buffer, label: ?[*:0]const u8) void {
-        wgpuBufferSetLabel(buffer, label);
+    pub fn setLabel(buffer: Buffer, label: []const u8) void {
+        wgpuBufferSetLabel(buffer, StringView.fromZigStr(label));
     }
-    extern fn wgpuBufferSetLabel(buffer: Buffer, label: ?[*:0]const u8) void;
+    extern fn wgpuBufferSetLabel(buffer: Buffer, label: StringView) void;
 
     pub fn unmap(buffer: Buffer) void {
         wgpuBufferUnmap(buffer);
@@ -1618,10 +1618,10 @@ pub const Buffer = *opaque {
 };
 
 pub const CommandBuffer = *opaque {
-    pub fn setLabel(command_buffer: CommandBuffer, label: ?[*:0]const u8) void {
-        wgpuCommandBufferSetLabel(command_buffer, label);
+    pub fn setLabel(command_buffer: CommandBuffer, label: []const u8) void {
+        wgpuCommandBufferSetLabel(command_buffer, StringView.fromZigStr(label));
     }
-    extern fn wgpuCommandBufferSetLabel(command_buffer: CommandBuffer, label: ?[*:0]const u8) void;
+    extern fn wgpuCommandBufferSetLabel(command_buffer: CommandBuffer, label: StringView) void;
 
     pub fn addRef(command_buffer: CommandBuffer) void {
         wgpuCommandBufferAddRef(command_buffer);
@@ -1746,25 +1746,25 @@ pub const CommandEncoder = *opaque {
         descriptor: ?*const CommandBufferDescriptor,
     ) CommandBuffer;
 
-    pub fn injectValidationError(command_encoder: CommandEncoder, message: [*:0]const u8) void {
+    pub fn injectValidationError(command_encoder: CommandEncoder, message: StringView) void {
         wgpuCommandEncoderInjectValidationError(command_encoder, message);
     }
-    extern fn wgpuCommandEncoderInjectValidationError(command_encoder: CommandEncoder, message: [*:0]const u8) void;
+    extern fn wgpuCommandEncoderInjectValidationError(command_encoder: CommandEncoder, message: StringView) void;
 
-    pub fn insertDebugMarker(command_encoder: CommandEncoder, marker_label: [*:0]const u8) void {
+    pub fn insertDebugMarker(command_encoder: CommandEncoder, marker_label: StringView) void {
         wgpuCommandEncoderInsertDebugMarker(command_encoder, marker_label);
     }
-    extern fn wgpuCommandEncoderInsertDebugMarker(command_encoder: CommandEncoder, marker_label: [*:0]const u8) void;
+    extern fn wgpuCommandEncoderInsertDebugMarker(command_encoder: CommandEncoder, marker_label: StringView) void;
 
     pub fn popDebugGroup(command_encoder: CommandEncoder) void {
         wgpuCommandEncoderPopDebugGroup(command_encoder);
     }
     extern fn wgpuCommandEncoderPopDebugGroup(command_encoder: CommandEncoder) void;
 
-    pub fn pushDebugGroup(command_encoder: CommandEncoder, group_label: [*:0]const u8) void {
+    pub fn pushDebugGroup(command_encoder: CommandEncoder, group_label: StringView) void {
         wgpuCommandEncoderPushDebugGroup(command_encoder, group_label);
     }
-    extern fn wgpuCommandEncoderPushDebugGroup(command_encoder: CommandEncoder, group_label: [*:0]const u8) void;
+    extern fn wgpuCommandEncoderPushDebugGroup(command_encoder: CommandEncoder, group_label: StringView) void;
 
     pub fn resolveQuerySet(
         command_encoder: CommandEncoder,
@@ -1792,10 +1792,10 @@ pub const CommandEncoder = *opaque {
         destination_offset: u64,
     ) void;
 
-    pub fn setLabel(command_encoder: CommandEncoder, label: ?[*:0]const u8) void {
-        wgpuCommandEncoderSetLabel(command_encoder, label);
+    pub fn setLabel(command_encoder: CommandEncoder, label: []const u8) void {
+        wgpuCommandEncoderSetLabel(command_encoder, StringView.fromZigStr(label));
     }
-    extern fn wgpuCommandEncoderSetLabel(command_encoder: CommandEncoder, label: ?[*:0]const u8) void;
+    extern fn wgpuCommandEncoderSetLabel(command_encoder: CommandEncoder, label: StringView) void;
 
     pub fn writeBuffer(
         command_encoder: CommandEncoder,
@@ -1879,12 +1879,12 @@ pub const ComputePassEncoder = *opaque {
     }
     extern fn wgpuComputePassEncoderEnd(compute_pass_encoder: ComputePassEncoder) void;
 
-    pub fn insertDebugMarker(compute_pass_encoder: ComputePassEncoder, marker_label: [*:0]const u8) void {
+    pub fn insertDebugMarker(compute_pass_encoder: ComputePassEncoder, marker_label: StringView) void {
         wgpuComputePassEncoderInsertDebugMarker(compute_pass_encoder, marker_label);
     }
     extern fn wgpuComputePassEncoderInsertDebugMarker(
         compute_pass_encoder: ComputePassEncoder,
-        marker_label: [*:0]const u8,
+        marker_label: StringView,
     ) void;
 
     pub fn popDebugGroup(compute_pass_encoder: ComputePassEncoder) void {
@@ -1892,12 +1892,12 @@ pub const ComputePassEncoder = *opaque {
     }
     extern fn wgpuComputePassEncoderPopDebugGroup(compute_pass_encoder: ComputePassEncoder) void;
 
-    pub fn pushDebugGroup(compute_pass_encoder: ComputePassEncoder, group_label: [*:0]const u8) void {
+    pub fn pushDebugGroup(compute_pass_encoder: ComputePassEncoder, group_label: StringView) void {
         wgpuComputePassEncoderPushDebugGroup(compute_pass_encoder, group_label);
     }
     extern fn wgpuComputePassEncoderPushDebugGroup(
         compute_pass_encoder: ComputePassEncoder,
-        group_label: [*:0]const u8,
+        group_label: StringView,
     ) void;
 
     pub fn setBindGroup(
@@ -1922,10 +1922,10 @@ pub const ComputePassEncoder = *opaque {
         dynamic_offsets: ?[*]const u32,
     ) void;
 
-    pub fn setLabel(compute_pass_encoder: ComputePassEncoder, label: ?[*:0]const u8) void {
-        wgpuComputePassEncoderSetLabel(compute_pass_encoder, label);
+    pub fn setLabel(compute_pass_encoder: ComputePassEncoder, label: []const u8) void {
+        wgpuComputePassEncoderSetLabel(compute_pass_encoder, StringView.fromZigStr(label));
     }
-    extern fn wgpuComputePassEncoderSetLabel(compute_pass_encoder: ComputePassEncoder, label: ?[*:0]const u8) void;
+    extern fn wgpuComputePassEncoderSetLabel(compute_pass_encoder: ComputePassEncoder, label: StringView) void;
 
     pub fn setPipeline(compute_pass_encoder: ComputePassEncoder, pipeline: ComputePipeline) void {
         wgpuComputePassEncoderSetPipeline(compute_pass_encoder, pipeline);
@@ -1968,10 +1968,10 @@ pub const ComputePipeline = *opaque {
         group_index: u32,
     ) BindGroupLayout;
 
-    pub fn setLabel(compute_pipeline: ComputePipeline, label: ?[*:0]const u8) void {
-        wgpuComputePipelineSetLabel(compute_pipeline, label);
+    pub fn setLabel(compute_pipeline: ComputePipeline, label: []const u8) void {
+        wgpuComputePipelineSetLabel(compute_pipeline, StringView.fromZigStr(label));
     }
-    extern fn wgpuComputePipelineSetLabel(compute_pipeline: ComputePipeline, label: ?[*:0]const u8) void;
+    extern fn wgpuComputePipelineSetLabel(compute_pipeline: ComputePipeline, label: StringView) void;
 
     pub fn addRef(compute_pipeline: ComputePipeline) void {
         wgpuComputePipelineAddRef(compute_pipeline);
@@ -2134,15 +2134,15 @@ pub const Device = *opaque {
     }
     extern fn wgpuDeviceHasFeature(device: Device, feature: FeatureName) bool;
 
-    pub fn injectError(device: Device, err_type: ErrorType, message: ?[*:0]const u8) void {
+    pub fn injectError(device: Device, err_type: ErrorType, message: StringView) void {
         wgpuDeviceInjectError(device, err_type, message);
     }
-    extern fn wgpuDeviceInjectError(device: Device, err_type: ErrorType, message: ?[*:0]const u8) void;
+    extern fn wgpuDeviceInjectError(device: Device, err_type: ErrorType, message: StringView) void;
 
-    pub fn forceLoss(device: Device, reason: DeviceLostReason, message: ?[*:0]const u8) void {
+    pub fn forceLoss(device: Device, reason: DeviceLostReason, message: StringView) void {
         wgpuDeviceForceLoss(device, reason, message);
     }
-    extern fn wgpuDeviceForceLoss(device: Device, reason: DeviceLostReason, message: ?[*:0]const u8) void;
+    extern fn wgpuDeviceForceLoss(device: Device, reason: DeviceLostReason, message: StringView) void;
 
     pub fn getAdapter(device: Device) Adapter {
         return wgpuDeviceGetAdapter(device);
@@ -2172,10 +2172,10 @@ pub const Device = *opaque {
         userdata: ?*anyopaque,
     ) void;
 
-    pub fn setLabel(device: Device, label: ?[*:0]const u8) void {
-        wgpuDeviceSetLabel(device, label);
+    pub fn setLabel(device: Device, label: []const u8) void {
+        wgpuDeviceSetLabel(device, StringView.fromZigStr(label));
     }
-    extern fn wgpuDeviceSetLabel(device: Device, label: ?[*:0]const u8) void;
+    extern fn wgpuDeviceSetLabel(device: Device, label: StringView) void;
 
     pub fn setLoggingCallback(device: Device, callback: LoggingCallback, userdata: ?*anyopaque) void {
         wgpuDeviceSetLoggingCallback(device, callback, userdata);
@@ -2213,10 +2213,10 @@ pub const ExternalTexture = *opaque {
     }
     extern fn wgpuExternalTextureDestroy(external_texture: ExternalTexture) void;
 
-    pub fn setLabel(external_texture: ExternalTexture, label: ?[*:0]const u8) void {
-        wgpuExternalTextureSetLabel(external_texture, label);
+    pub fn setLabel(external_texture: ExternalTexture, label: []const u8) void {
+        wgpuExternalTextureSetLabel(external_texture, StringView.fromZigStr(label));
     }
-    extern fn wgpuExternalTextureSetLabel(external_texture: ExternalTexture, label: ?[*:0]const u8) void;
+    extern fn wgpuExternalTextureSetLabel(external_texture: ExternalTexture, label: StringView) void;
 
     pub fn addRef(external_texture: ExternalTexture) void {
         wgpuExternalTextureAddRef(external_texture);
@@ -2265,10 +2265,10 @@ pub const Instance = *opaque {
 };
 
 pub const PipelineLayout = *opaque {
-    pub fn setLabel(pipeline_layout: PipelineLayout, label: ?[*:0]const u8) void {
-        wgpuPipelineLayoutSetLabel(pipeline_layout, label);
+    pub fn setLabel(pipeline_layout: PipelineLayout, label: []const u8) void {
+        wgpuPipelineLayoutSetLabel(pipeline_layout, StringView.fromZigStr(label));
     }
-    extern fn wgpuPipelineLayoutSetLabel(pipeline_layout: PipelineLayout, label: ?[*:0]const u8) void;
+    extern fn wgpuPipelineLayoutSetLabel(pipeline_layout: PipelineLayout, label: StringView) void;
 
     pub fn addRef(pipeline_layout: PipelineLayout) void {
         wgpuPipelineLayoutAddRef(pipeline_layout);
@@ -2287,10 +2287,10 @@ pub const QuerySet = *opaque {
     }
     extern fn wgpuQuerySetDestroy(query_set: QuerySet) void;
 
-    pub fn setLabel(query_set: QuerySet, label: ?[*:0]const u8) void {
-        wgpuQuerySetSetLabel(query_set, label);
+    pub fn setLabel(query_set: QuerySet, label: []const u8) void {
+        wgpuQuerySetSetLabel(query_set, StringView.fromZigStr(label));
     }
-    extern fn wgpuQuerySetSetLabel(query_set: QuerySet, label: ?[*:0]const u8) void;
+    extern fn wgpuQuerySetSetLabel(query_set: QuerySet, label: StringView) void;
 
     pub fn addRef(query_set: QuerySet) void {
         wgpuQuerySetAddRef(query_set);
@@ -2367,10 +2367,10 @@ pub const Queue = *opaque {
             oswd(queue, signal_value, callback, userdata);
         }
     }
-    pub fn setLabel(queue: Queue, label: ?[*:0]const u8) void {
-        wgpuQueueSetLabel(queue, label);
+    pub fn setLabel(queue: Queue, label: []const u8) void {
+        wgpuQueueSetLabel(queue, StringView.fromZigStr(label));
     }
-    extern fn wgpuQueueSetLabel(queue: Queue, label: ?[*:0]const u8) void;
+    extern fn wgpuQueueSetLabel(queue: Queue, label: StringView) void;
 
     pub fn submit(queue: Queue, commands: []const CommandBuffer) void {
         wgpuQueueSubmit(queue, @as(u32, @intCast(commands.len)), commands.ptr);
@@ -2538,13 +2538,13 @@ pub const RenderBundleEncoder = *opaque {
 
     pub fn insertDebugMarker(
         render_bundle_encoder: RenderBundleEncoder,
-        marker_label: [*:0]const u8,
+        marker_label: StringView,
     ) void {
         wgpuRenderBundleEncoderInsertDebugMarker(render_bundle_encoder, marker_label);
     }
     extern fn wgpuRenderBundleEncoderInsertDebugMarker(
         render_bundle_encoder: RenderBundleEncoder,
-        marker_label: [*:0]const u8,
+        marker_label: StringView,
     ) void;
 
     pub fn popDebugGroup(render_bundle_encoder: RenderBundleEncoder) void {
@@ -2552,12 +2552,12 @@ pub const RenderBundleEncoder = *opaque {
     }
     extern fn wgpuRenderBundleEncoderPopDebugGroup(render_bundle_encoder: RenderBundleEncoder) void;
 
-    pub fn pushDebugGroup(render_bundle_encoder: RenderBundleEncoder, group_label: [*:0]const u8) void {
+    pub fn pushDebugGroup(render_bundle_encoder: RenderBundleEncoder, group_label: StringView) void {
         wgpuRenderBundleEncoderPushDebugGroup(render_bundle_encoder, group_label);
     }
     extern fn wgpuRenderBundleEncoderPushDebugGroup(
         render_bundle_encoder: RenderBundleEncoder,
-        group_label: [*:0]const u8,
+        group_label: StringView,
     ) void;
 
     pub fn setBindGroup(
@@ -2599,12 +2599,12 @@ pub const RenderBundleEncoder = *opaque {
         size: u64,
     ) void;
 
-    pub fn setLabel(render_bundle_encoder: RenderBundleEncoder, label: ?[*:0]const u8) void {
-        wgpuRenderBundleEncoderSetLabel(render_bundle_encoder, label);
+    pub fn setLabel(render_bundle_encoder: RenderBundleEncoder, label: []const u8) void {
+        wgpuRenderBundleEncoderSetLabel(render_bundle_encoder, StringView.fromZigStr(label));
     }
     extern fn wgpuRenderBundleEncoderSetLabel(
         render_bundle_encoder: RenderBundleEncoder,
-        label: ?[*:0]const u8,
+        label: StringView,
     ) void;
 
     pub fn setPipeline(render_bundle_encoder: RenderBundleEncoder, pipeline: RenderPipeline) void {
@@ -2744,12 +2744,12 @@ pub const RenderPassEncoder = *opaque {
         bundles: [*]const RenderBundle,
     ) void;
 
-    pub fn insertDebugMarker(render_pass_encoder: RenderPassEncoder, marker_label: [*:0]const u8) void {
+    pub fn insertDebugMarker(render_pass_encoder: RenderPassEncoder, marker_label: StringView) void {
         wgpuRenderPassEncoderInsertDebugMarker(render_pass_encoder, marker_label);
     }
     extern fn wgpuRenderPassEncoderInsertDebugMarker(
         render_pass_encoder: RenderPassEncoder,
-        marker_label: [*:0]const u8,
+        marker_label: StringView,
     ) void;
 
     pub fn popDebugGroup(render_pass_encoder: RenderPassEncoder) void {
@@ -2757,12 +2757,12 @@ pub const RenderPassEncoder = *opaque {
     }
     extern fn wgpuRenderPassEncoderPopDebugGroup(render_pass_encoder: RenderPassEncoder) void;
 
-    pub fn pushDebugGroup(render_pass_encoder: RenderPassEncoder, group_label: [*:0]const u8) void {
+    pub fn pushDebugGroup(render_pass_encoder: RenderPassEncoder, group_label: StringView) void {
         wgpuRenderPassEncoderPushDebugGroup(render_pass_encoder, group_label);
     }
     extern fn wgpuRenderPassEncoderPushDebugGroup(
         render_pass_encoder: RenderPassEncoder,
-        group_label: [*:0]const u8,
+        group_label: StringView,
     ) void;
 
     pub fn setBindGroup(
@@ -2812,10 +2812,10 @@ pub const RenderPassEncoder = *opaque {
         size: u64,
     ) void;
 
-    pub fn setLabel(render_pass_encoder: RenderPassEncoder, label: ?[*:0]const u8) void {
-        wgpuRenderPassEncoderSetLabel(render_pass_encoder, label);
+    pub fn setLabel(render_pass_encoder: RenderPassEncoder, label: []const u8) void {
+        wgpuRenderPassEncoderSetLabel(render_pass_encoder, StringView.fromZigStr(label));
     }
-    extern fn wgpuRenderPassEncoderSetLabel(render_pass_encoder: RenderPassEncoder, label: ?[*:0]const u8) void;
+    extern fn wgpuRenderPassEncoderSetLabel(render_pass_encoder: RenderPassEncoder, label: StringView) void;
 
     pub fn setPipeline(render_pass_encoder: RenderPassEncoder, pipeline: RenderPipeline) void {
         wgpuRenderPassEncoderSetPipeline(render_pass_encoder, pipeline);
@@ -2918,10 +2918,10 @@ pub const RenderPipeline = *opaque {
         group_index: u32,
     ) BindGroupLayout;
 
-    pub fn setLabel(render_pipeline: RenderPipeline, label: ?[*:0]const u8) void {
-        wgpuRenderPipelineSetLabel(render_pipeline, label);
+    pub fn setLabel(render_pipeline: RenderPipeline, label: []const u8) void {
+        wgpuRenderPipelineSetLabel(render_pipeline, StringView.fromZigStr(label));
     }
-    extern fn wgpuRenderPipelineSetLabel(render_pipeline: RenderPipeline, label: ?[*:0]const u8) void;
+    extern fn wgpuRenderPipelineSetLabel(render_pipeline: RenderPipeline, label: StringView) void;
 
     pub fn addRef(render_pipeline: RenderPipeline) void {
         wgpuRenderPipelineAddRef(render_pipeline);
@@ -2935,10 +2935,10 @@ pub const RenderPipeline = *opaque {
 };
 
 pub const Sampler = *opaque {
-    pub fn setLabel(sampler: Sampler, label: ?[*:0]const u8) void {
-        wgpuSamplerSetLabel(sampler, label);
+    pub fn setLabel(sampler: Sampler, label: []const u8) void {
+        wgpuSamplerSetLabel(sampler, StringView.fromZigStr(label));
     }
-    extern fn wgpuSamplerSetLabel(sampler: Sampler, label: ?[*:0]const u8) void;
+    extern fn wgpuSamplerSetLabel(sampler: Sampler, label: StringView) void;
 
     pub fn addRef(sampler: Sampler) void {
         wgpuSamplerAddRef(sampler);
@@ -2965,10 +2965,10 @@ pub const ShaderModule = *opaque {
         userdata: ?*anyopaque,
     ) void;
 
-    pub fn setLabel(shader_module: ShaderModule, label: ?[*:0]const u8) void {
-        wgpuShaderModuleSetLabel(shader_module, label);
+    pub fn setLabel(shader_module: ShaderModule, label: []const u8) void {
+        wgpuShaderModuleSetLabel(shader_module, StringView.fromZigStr(label));
     }
-    extern fn wgpuShaderModuleSetLabel(shader_module: ShaderModule, label: ?[*:0]const u8) void;
+    extern fn wgpuShaderModuleSetLabel(shader_module: ShaderModule, label: StringView) void;
 
     pub fn addRef(shader_module: ShaderModule) void {
         wgpuShaderModuleAddRef(shader_module);
@@ -3022,10 +3022,10 @@ pub const Texture = *opaque {
     }
     extern fn wgpuTextureDestroy(texture: Texture) void;
 
-    pub fn setLabel(texture: Texture, label: ?[*:0]const u8) void {
-        wgpuTextureSetLabel(texture, label);
+    pub fn setLabel(texture: Texture, label: []const u8) void {
+        wgpuTextureSetLabel(texture, StringView.fromZigStr(label));
     }
-    extern fn wgpuTextureSetLabel(texture: Texture, label: ?[*:0]const u8) void;
+    extern fn wgpuTextureSetLabel(texture: Texture, label: StringView) void;
 
     pub fn getWidth(texture: Texture) u32 {
         return wgpuTextureGetWidth(texture);
@@ -3049,10 +3049,10 @@ pub const Texture = *opaque {
 };
 
 pub const TextureView = *opaque {
-    pub fn setLabel(texture_view: TextureView, label: ?[*:0]const u8) void {
-        wgpuTextureViewSetLabel(texture_view, label);
+    pub fn setLabel(texture_view: TextureView, label: []const u8) void {
+        wgpuTextureViewSetLabel(texture_view, StringView.fromZigStr(label));
     }
-    extern fn wgpuTextureViewSetLabel(texture_view: TextureView, label: ?[*:0]const u8) void;
+    extern fn wgpuTextureViewSetLabel(texture_view: TextureView, label: StringView) void;
 
     pub fn addRef(texture_view: TextureView) void {
         wgpuTextureViewAddRef(texture_view);

@@ -738,7 +738,7 @@ pub const GraphicsContext = struct {
         fn create(
             status: wgpu.CreatePipelineAsyncStatus,
             pipeline: wgpu.RenderPipeline,
-            message: ?[*:0]const u8,
+            message: wgpu.StringView,
             userdata: ?*anyopaque,
         ) callconv(.C) void {
             const op = @as(*AsyncCreateOpRender, @ptrCast(@alignCast(userdata)));
@@ -749,8 +749,8 @@ pub const GraphicsContext = struct {
                 );
             } else {
                 std.log.err(
-                    "[zgpu] Failed to async create render pipeline (status: {s}, message: {?s}).",
-                    .{ @tagName(status), message },
+                    "[zgpu] Failed to async create render pipeline (status: {s}, message: {s}).",
+                    .{ @tagName(status), message.zigStr() orelse "no message" },
                 );
             }
             op.allocator.destroy(op);
@@ -799,7 +799,7 @@ pub const GraphicsContext = struct {
         fn create(
             status: wgpu.CreatePipelineAsyncStatus,
             pipeline: wgpu.ComputePipeline,
-            message: ?[*:0]const u8,
+            message: wgpu.StringView,
             userdata: ?*anyopaque,
         ) callconv(.C) void {
             const op = @as(*AsyncCreateOpCompute, @ptrCast(@alignCast(userdata)));
@@ -810,8 +810,8 @@ pub const GraphicsContext = struct {
                 );
             } else {
                 std.log.err(
-                    "[zgpu] Failed to async create compute pipeline (status: {s}, message: {?s}).",
-                    .{ @tagName(status), message },
+                    "[zgpu] Failed to async create compute pipeline (status: {s}, message: {s}).",
+                    .{ @tagName(status), message.zigStr() orelse "no message" },
                 );
             }
             op.allocator.destroy(op);
@@ -1110,7 +1110,7 @@ pub const GraphicsContext = struct {
             mipgen.pipeline = gctx.createComputePipeline(pipeline_layout, .{
                 .compute = .{
                     .module = cs_module,
-                    .entry_point = "main",
+                    .entry_point = wgpu.StringView.fromZigStr("main"),
                 },
             });
 
@@ -1343,13 +1343,13 @@ pub fn createRenderPipelineSimple(
     const pipe_desc = wgpu.RenderPipelineDescriptor{
         .vertex = wgpu.VertexState{
             .module = vs_mod,
-            .entry_point = "main",
+            .entry_point = wgpu.StringView.fromZigStr("main"),
             .buffer_count = if (vertex_buffers) |vbs| vbs.len else 0,
             .buffers = if (vertex_buffers) |vbs| &vbs else null,
         },
         .fragment = &wgpu.FragmentState{
             .module = fs_mod,
-            .entry_point = "main",
+            .entry_point = wgpu.StringView.fromZigStr("main"),
             .target_count = color_targets.len,
             .targets = &color_targets,
         },
@@ -1747,7 +1747,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
     const descriptor = switch (os_tag) {
         .windows => SurfaceDescriptor{
             .windows_hwnd = .{
-                .label = "basic surface",
+                .label = "Win32 Window Surface",
                 .hinstance = std.os.windows.kernel32.GetModuleHandleW(null).?,
                 .hwnd = window_provider.getWin32Window().?,
             },
@@ -1768,7 +1768,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
 
             break :macos SurfaceDescriptor{
                 .metal_layer = .{
-                    .label = "basic surface",
+                    .label = "Cocoa Window Surface",
                     .layer = layer.?,
                 },
             };
@@ -1783,7 +1783,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             if (window_provider.getWaylandDisplay()) |wl_display| {
                 break :linux SurfaceDescriptor{
                     .wayland = .{
-                        .label = "basic surface",
+                        .label = "Wayland Window Surface",
                         .display = wl_display,
                         .surface = window_provider.getWaylandSurface().?,
                     },
@@ -1791,7 +1791,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             } else {
                 break :linux SurfaceDescriptor{
                     .xlib = .{
-                        .label = "basic surface",
+                        .label = "X11 Window Surface",
                         .display = window_provider.getX11Display().?,
                         .window = window_provider.getX11Window(),
                     },
