@@ -1398,6 +1398,10 @@ pub const Instance = *opaque {
         return @enumFromInt(c.wgpuInstanceWaitAny(@ptrCast(instance), futures.len, @ptrCast(futures.ptr), timeout_ns));
     }
 
+    pub fn processEvents(instance: Instance) void {
+        c.wgpuInstanceProcessEvents(@ptrCast(instance));
+    }
+
     pub fn addRef(instance: Instance) void {
         c.wgpuInstanceAddRef(@ptrCast(instance));
     }
@@ -1467,7 +1471,7 @@ pub const Device = *opaque {
         descriptor: ComputePipelineDescriptor,
         callback_info: CreateComputePipelineAsyncCallbackInfo,
     ) Future {
-        return @ptrCast(c.wgpuDeviceCreateComputePipelineAsync(
+        return @bitCast(c.wgpuDeviceCreateComputePipelineAsync(
             @ptrCast(device),
             @ptrCast(&descriptor),
             @bitCast(callback_info),
