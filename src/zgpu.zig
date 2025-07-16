@@ -453,8 +453,15 @@ pub const GraphicsContext = struct {
         gctx.uniformsNextStagingBuffer();
     }
 
-    fn uniformsMappedCallback(status: wgpu.BufferMapAsyncStatus, userdata: ?*anyopaque) callconv(.C) void {
-        const usb = @as(*UniformsStagingBuffer, @ptrCast(@alignCast(userdata)));
+    fn uniformsMappedCallback(
+        status: wgpu.MapAsyncStatus,
+        message: wgpu.StringView.C,
+        userdata_1: ?*anyopaque,
+        userdata_2: ?*anyopaque,
+    ) callconv(.C) void {
+        _ = message;
+        _ = userdata_2;
+        const usb = @as(*UniformsStagingBuffer, @ptrCast(@alignCast(userdata_1)));
         assert(usb.slice == null);
         if (status == .success) {
             usb.slice = usb.buffer.getMappedRange(u8, 0, uniforms_buffer_size).?;
@@ -468,12 +475,14 @@ pub const GraphicsContext = struct {
             // Map staging buffer which was used this frame.
             const current = gctx.uniforms.stage.current;
             assert(gctx.uniforms.stage.buffers[current].slice == null);
-            gctx.uniforms.stage.buffers[current].buffer.mapAsync(
+            _ = gctx.uniforms.stage.buffers[current].buffer.mapAsync(
                 .{ .write = true },
                 0,
                 uniforms_buffer_size,
-                uniformsMappedCallback,
-                @ptrCast(&gctx.uniforms.stage.buffers[current]),
+                .{
+                    .callback = uniformsMappedCallback,
+                    .userdata_1 = @ptrCast(&gctx.uniforms.stage.buffers[current]),
+                },
             );
         }
 
@@ -490,8 +499,6 @@ pub const GraphicsContext = struct {
         if (gctx.uniforms.stage.num >= uniforms_staging_pipeline_len) {
             // Wait until one of the buffers is mapped and ready to use.
             while (true) {
-                gctx.device.tick();
-
                 i = 0;
                 while (i < gctx.uniforms.stage.num) : (i += 1) {
                     if (gctx.uniforms.stage.buffers[i].slice != null) {
@@ -511,7 +518,7 @@ pub const GraphicsContext = struct {
         const buffer_handle = gctx.createBuffer(.{
             .usage = .{ .copy_src = true, .map_write = true },
             .size = uniforms_buffer_size,
-            .mapped_at_creation = .true,
+            .mapped_at_creation = c.WGPU_TRUE,
         });
 
         // Add new (mapped) staging buffer to the buffer list.
@@ -562,11 +569,18 @@ pub const GraphicsContext = struct {
         gctx.uniformsNextStagingBuffer();
     }
 
-    fn gpuWorkDone(status: wgpu.QueueWorkDoneStatus, userdata: ?*anyopaque) callconv(.C) void {
-        const gpu_frame_number: *u64 = @ptrCast(@alignCast(userdata));
+    fn gpuWorkDone(
+        status: wgpu.QueueWorkDoneStatus,
+        message: wgpu.StringView.C,
+        userdata_1: ?*anyopaque,
+        userdata_2: ?*anyopaque,
+    ) callconv(.C) void {
+        _ = message;
+        _ = userdata_2;
+        const gpu_frame_number: *u64 = @ptrCast(@alignCast(userdata_1));
         gpu_frame_number.* += 1;
         if (status != .success) {
-            std.log.err("[zgpu] Failed to complete GPU work (status: {s}).", .{@tagName(status)});
+            std.log.err("[zgpu] Failed to complete GPU work (status: {s}).", .{ @tagName(status) });
         }
     }
 
@@ -680,6 +694,7 @@ pub const GraphicsContext = struct {
         // if (!emscripten and dim == .undefined) {
         if (dim == .undefined) {
             dim = switch (info.dimension) {
+                .undefined => .tvdim_2d,
                 .tdim_1d => .tvdim_1d,
                 .tdim_2d => .tvdim_2d,
                 .tdim_3d => .tvdim_3d,
@@ -960,7 +975,7 @@ pub const GraphicsContext = struct {
         return gctx.pipeline_layout_pool.addResource(gctx.*, info);
     }
 
-    pub fn lookupResource(gctx: GraphicsContext, handle: anytype) ?handleToGpuResourceType(@TypeOf(handle)) {
+    pub fn lookupResource(gctx: GraphicsContext, handle: anytype) ?HandleToGpuResourceType(@TypeOf(handle)) {
         if (gctx.isResourceValid(handle)) {
             const T = @TypeOf(handle);
             return switch (T) {
@@ -981,7 +996,7 @@ pub const GraphicsContext = struct {
         return null;
     }
 
-    pub fn lookupResourceInfo(gctx: GraphicsContext, handle: anytype) ?handleToResourceInfoType(@TypeOf(handle)) {
+    pub fn lookupResourceInfo(gctx: GraphicsContext, handle: anytype) ?HandleToResourceInfoType(@TypeOf(handle)) {
         if (gctx.isResourceValid(handle)) {
             const T = @TypeOf(handle);
             return switch (T) {
@@ -1943,7 +1958,7 @@ fn logUnhandledError(
         std.process.exit(1);
 }
 
-fn handleToGpuResourceType(comptime T: type) type {
+fn HandleToGpuResourceType(comptime T: type) type {
     return switch (T) {
         BufferHandle => wgpu.Buffer,
         TextureHandle => wgpu.Texture,
@@ -1954,11 +1969,11 @@ fn handleToGpuResourceType(comptime T: type) type {
         BindGroupHandle => wgpu.BindGroup,
         BindGroupLayoutHandle => wgpu.BindGroupLayout,
         PipelineLayoutHandle => wgpu.PipelineLayout,
-        else => @compileError("[zgpu] handleToGpuResourceType() not implemented for " ++ @typeName(T)),
+        else => @compileError("[zgpu] HandleToGpuResourceType() not implemented for " ++ @typeName(T)),
     };
 }
 
-fn handleToResourceInfoType(comptime T: type) type {
+fn HandleToResourceInfoType(comptime T: type) type {
     return switch (T) {
         BufferHandle => BufferInfo,
         TextureHandle => TextureInfo,
@@ -1969,7 +1984,7 @@ fn handleToResourceInfoType(comptime T: type) type {
         BindGroupHandle => BindGroupInfo,
         BindGroupLayoutHandle => BindGroupLayoutInfo,
         PipelineLayoutHandle => PipelineLayoutInfo,
-        else => @compileError("[zgpu] handleToResourceInfoType() not implemented for " ++ @typeName(T)),
+        else => @compileError("[zgpu] HandleToResourceInfoType() not implemented for " ++ @typeName(T)),
     };
 }
 
@@ -2000,6 +2015,6 @@ fn formatToShaderFormat(format: wgpu.TextureFormat) []const u8 {
 // Section: Tests
 //
 
-test "ref_all_decls" {
-    std.testing.refAllDecls(@This());
+test "zgpu_ref_all_decls" {
+    std.testing.refAllDeclsRecursive(@This());
 }

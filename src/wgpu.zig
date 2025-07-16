@@ -1,7 +1,19 @@
 const std = @import("std");
-const emscripten = @import("builtin").target.os.tag == .emscripten;
 const c = @cImport(@cInclude("webgpu.h"));
 pub const slog = std.log.scoped(.wgpu);
+
+pub const True = OptionalBool.true;
+pub const False = OptionalBool.false;
+
+//
+// Section: Enums
+//
+
+pub const OptionalBool = enum(u32) {
+    false = 0x00000000,
+    true = 0x00000001,
+    undefined = 0x00000002,
+};
 
 pub const Status = enum(u32) {
     success = 0x00000001,
@@ -12,12 +24,6 @@ pub const WaitStatus = enum(u32) {
     success = 0x00000001,
     timed_out = 0x00000002,
     @"error" = 0x00000003,
-};
-
-pub const OptionalBool = enum(u32) {
-    false = 0x00000000,
-    true = 0x00000001,
-    undefined = 0x00000002,
 };
 
 pub const CallbackMode = enum(u32) {
@@ -68,66 +74,34 @@ pub const BackendType = enum(u32) {
     opengles,
 };
 
-pub const BlendFactor = switch (emscripten) {
-    true => enum(u32) {
-        undefined = 0x00000000,
-        zero = 0x00000001,
-        one = 0x00000002,
-        src = 0x00000003,
-        one_minus_src = 0x00000004,
-        src_alpha = 0x00000005,
-        one_minus_src_alpha = 0x00000006,
-        dst = 0x00000007,
-        one_minus_dst = 0x00000008,
-        dst_alpha = 0x00000009,
-        one_minus_dst_alpha = 0x0000000A,
-        src_alpha_saturated = 0x0000000B,
-        constant = 0x0000000C,
-        one_minus_constant = 0x0000000D,
-        src1 = 0x0000000E,
-        one_minus_src1 = 0x0000000F,
-        src1_alpha = 0x00000010,
-        one_minus_src1_alpha = 0x00000011,
-    },
-    false => enum(u32) {
-        undefined = 0x00000000,
-        zero = 0x00000001,
-        one = 0x00000002,
-        src = 0x00000003,
-        one_minus_src = 0x00000004,
-        src_alpha = 0x00000005,
-        one_minus_src_alpha = 0x00000006,
-        dst = 0x00000007,
-        one_minus_dst = 0x00000008,
-        dst_alpha = 0x00000009,
-        one_minus_dst_alpha = 0x0000000A,
-        src_alpha_saturated = 0x0000000B,
-        constant = 0x0000000C,
-        one_minus_constant = 0x0000000D,
-        src1 = 0x0000000E,
-        one_minus_src1 = 0x0000000F,
-        src1_alpha = 0x00000010,
-        one_minus_src1_alpha = 0x00000011,
-    },
+pub const BlendFactor = enum(u32) {
+    undefined = 0x00000000,
+    zero = 0x00000001,
+    one = 0x00000002,
+    src = 0x00000003,
+    one_minus_src = 0x00000004,
+    src_alpha = 0x00000005,
+    one_minus_src_alpha = 0x00000006,
+    dst = 0x00000007,
+    one_minus_dst = 0x00000008,
+    dst_alpha = 0x00000009,
+    one_minus_dst_alpha = 0x0000000A,
+    src_alpha_saturated = 0x0000000B,
+    constant = 0x0000000C,
+    one_minus_constant = 0x0000000D,
+    src1 = 0x0000000E,
+    one_minus_src1 = 0x0000000F,
+    src1_alpha = 0x00000010,
+    one_minus_src1_alpha = 0x00000011,
 };
 
-pub const BlendOperation = switch (emscripten) {
-    true => enum(u32) {
-        undefined = 0x00000000,
-        add = 0x00000001,
-        subtract = 0x00000002,
-        reverse_subtract = 0x00000003,
-        min = 0x00000004,
-        max = 0x00000005,
-    },
-    false => enum(u32) {
-        undefined = 0x00000000,
-        add = 0x00000001,
-        subtract = 0x00000002,
-        reverse_subtract = 0x00000003,
-        min = 0x00000004,
-        max = 0x00000005,
-    },
+pub const BlendOperation = enum(u32) {
+    undefined = 0x00000000,
+    add = 0x00000001,
+    subtract = 0x00000002,
+    reverse_subtract = 0x00000003,
+    min = 0x00000004,
+    max = 0x00000005,
 };
 
 pub const BufferBindingType = enum(u32) {
@@ -144,18 +118,6 @@ pub const MapAsyncStatus = enum(u32) {
     @"error" = 0x00000003,
     aborted = 0x00000004,
 };
-
-// pub const BufferMapAsyncStatus = enum(u32) {
-//     success = 0x00000000,
-//     validation_error = 0x00000001,
-//     unknown = 0x00000002,
-//     device_lost = 0x00000003,
-//     destroyed_before_callback = 0x00000004,
-//     unmapped_before_callback = 0x00000005,
-//     mappingAlreadyPending = 0x00000006,
-//     offset_out_of_range = 0x00000007,
-//     size_out_of_range = 0x00000008,
-// };
 
 pub const BufferMapState = enum(u32) {
     unmapped = 0x00000001,
@@ -314,6 +276,12 @@ pub const QueueWorkDoneStatus = enum(u32) {
     @"error" = 0x00000003,
 };
 
+pub const PopErrorScopeStatus = enum(u32) {
+    success = 0x00000001,
+    callback_cancelled = 0x00000002,
+    @"error" = 0x00000003,
+};
+
 pub const RequestAdapterStatus = enum(u32) {
     success = 0x00000001,
     callback_cancelled = 0x00000002,
@@ -335,44 +303,6 @@ pub const SurfaceGetCurrentTextureStatus = enum(u32) {
     lost = 0x00000005,
     @"error" = 0x00000006,
 };
-
-pub const SurfaceSourceMetalLayer = extern struct {
-    chain: ChainedStruct,
-    layer: *anyopaque,
-};
-
-pub const SurfaceSourceWaylandSurface = extern struct {
-    chain: ChainedStruct,
-    display: *anyopaque,
-    surface: *anyopaque,
-};
-
-pub const SurfaceSourceWindowsHWND = extern struct {
-    chain: ChainedStruct,
-    hinstance: *anyopaque,
-    hwnd: *anyopaque,
-};
-
-pub const SurfaceSourceXlibWindow = extern struct {
-    chain: ChainedStruct,
-    display: *anyopaque,
-    window: u32,
-};
-
-// pub const SurfaceSourceWindowsCoreWindow = extern struct {
-//     chain: ChainedStruct,
-//     core_window: *anyopaque,
-// };
-
-// pub const SurfaceSourceWindowsSwapChainPanel = extern struct {
-//     chain: ChainedStruct,
-//     swap_chain_panel: *anyopaque,
-// };
-
-// pub const SurfaceSourceCanvasHTMLSelector = extern struct {
-//     chain: ChainedStruct,
-//     selector: c.WGPUStringView,
-// };
 
 pub const SType = enum(u32) {
     shader_source_spirv = 0x00000001,
@@ -429,19 +359,11 @@ pub const TextureAspect = enum(u32) {
     depth_only = 0x00000003,
 };
 
-pub const TextureDimension = switch (emscripten) {
-    true => enum(u32) {
-        undefined = 0x00000000,
-        tdim_1d = 0x00000001,
-        tdim_2d = 0x00000002,
-        tdim_3d = 0x00000003,
-    },
-    false => enum(u32) {
-        undefined = 0x00000000,
-        tdim_1d = 0x00000001,
-        tdim_2d = 0x00000002,
-        tdim_3d = 0x00000003,
-    },
+pub const TextureDimension =  enum(u32) {
+    undefined = 0x00000000,
+    tdim_1d = 0x00000001,
+    tdim_2d = 0x00000002,
+    tdim_3d = 0x00000003,
 };
 
 pub const TextureFormat = enum(u32) {
@@ -620,6 +542,10 @@ pub const VertexStepMode = enum(u32) {
     instance = 0x00000002,
 };
 
+//
+// Section: Flags
+//
+
 pub const Flags = u64;
 
 pub const BufferUsage = packed struct(Flags) {
@@ -670,7 +596,34 @@ pub const TextureUsage = packed struct(Flags) {
 };
 
 //
-// Section
+// Section: Surface Sources
+//
+
+pub const SurfaceSourceMetalLayer = extern struct {
+    chain: ChainedStruct,
+    layer: *anyopaque,
+};
+
+pub const SurfaceSourceWaylandSurface = extern struct {
+    chain: ChainedStruct,
+    display: *anyopaque,
+    surface: *anyopaque,
+};
+
+pub const SurfaceSourceWindowsHWND = extern struct {
+    chain: ChainedStruct,
+    hinstance: *anyopaque,
+    hwnd: *anyopaque,
+};
+
+pub const SurfaceSourceXlibWindow = extern struct {
+    chain: ChainedStruct,
+    display: *anyopaque,
+    window: u32,
+};
+
+//
+// Section: Extern Structs
 //
 
 pub const Future = extern struct {
@@ -781,6 +734,14 @@ pub const CreateRenderPipelineAsyncCallbackInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     mode: CallbackMode = .undefined,
     callback: ?CreateRenderPipelineAsyncCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
+pub const PopErrorScopeCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undefined,
+    callback: ?PopErrorScopeCallback = null,
     userdata_1: ?*anyopaque = null,
     userdata_2: ?*anyopaque = null,
 };
@@ -1182,25 +1143,14 @@ pub const Color = extern struct {
     a: f64,
 };
 
-pub const RenderPassColorAttachment = switch (emscripten) {
-    true => extern struct {
-        next_in_chain: ?*const ChainedStruct = null,
-        view: ?TextureView,
-        depth_slice: u32 = std.math.maxInt(u32),
-        resolve_target: ?TextureView = null,
-        load_op: LoadOp,
-        store_op: StoreOp,
-        clear_value: Color = .{ .r = 0.0, .g = 0.0, .b = 0.0, .a = 0.0 },
-    },
-    false => extern struct {
-        next_in_chain: ?*const ChainedStruct = null,
-        view: ?TextureView,
-        depth_slice: u32 = std.math.maxInt(u32),
-        resolve_target: ?TextureView = null,
-        load_op: LoadOp,
-        store_op: StoreOp,
-        clear_value: Color = .{ .r = 0.0, .g = 0.0, .b = 0.0, .a = 0.0 },
-    },
+pub const RenderPassColorAttachment = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    view: ?TextureView,
+    depth_slice: u32 = std.math.maxInt(u32),
+    resolve_target: ?TextureView = null,
+    load_op: LoadOp,
+    store_op: StoreOp,
+    clear_value: Color = .{ .r = 0.0, .g = 0.0, .b = 0.0, .a = 0.0 },
 };
 
 pub const RenderPassDepthStencilAttachment = extern struct {
@@ -1255,18 +1205,6 @@ pub const CommandBufferDescriptor = extern struct {
     label: c.WGPUStringView = StringView.initC(),
 };
 
-// pub const CopyTextureForBrowserOptions = extern struct {
-//     next_in_chain: ?*const ChainedStruct = null,
-//     flip_y: bool,
-//     needs_color_space_conversion: bool,
-//     src_alpha_mode: AlphaMode,
-//     src_transfer_function_parameters: ?[*]const f32,
-//     conversion_matrix: ?[*]const f32,
-//     dst_transfer_function_parameters: ?[*]const f32,
-//     dst_alpha_mode: AlphaMode,
-//     internal_usage: bool,
-// };
-
 pub const TextureViewDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     label: c.WGPUStringView = StringView.initC(),
@@ -1301,6 +1239,10 @@ pub const RenderBundleDescriptor = extern struct {
     label: c.WGPUStringView = StringView.initC(),
 };
 
+//
+// Section: Callbacks
+//
+
 pub const CreateComputePipelineAsyncCallback = *const fn (
     status: CreatePipelineAsyncStatus,
     pipeline: ComputePipeline,
@@ -1317,7 +1259,8 @@ pub const CreateRenderPipelineAsyncCallback = *const fn (
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
 
-pub const ErrorCallback = *const fn (
+pub const PopErrorScopeCallback = *const fn (
+    status: PopErrorScopeStatus,
     err_type: ErrorType,
     message: c.WGPUStringView,
     userdata_1: ?*anyopaque,
@@ -1376,6 +1319,10 @@ pub const CompilationInfoCallback = *const fn (
     userdata_1: ?*anyopaque,
     userdata_2: ?*anyopaque,
 ) callconv(.C) void;
+
+//
+// Section: Opaques/Functions
+//
 
 pub inline fn createInstance(desc: ?InstanceDescriptor) Instance {
     return @ptrCast(c.wgpuCreateInstance(if (desc) |d| @ptrCast(&d) else null));
@@ -1478,14 +1425,6 @@ pub const Device = *opaque {
         ));
     }
 
-    // pub fn createErrorBuffer(device: Device) Buffer {
-    //     return @ptrCast(c.wgpuDeviceCreateErrorBuffer(@ptrCast(device)));
-    // }
-    //
-    // pub fn createExternalTexture(device: Device, descriptor: ExternalTextureDescriptor) ExternalTexture {
-    //     return @ptrCast(c.wgpuDeviceCreateExternalTexture(@ptrCast(device), @ptrCast(&descriptor)));
-    // }
-
     pub fn createPipelineLayout(device: Device, descriptor: PipelineLayoutDescriptor) PipelineLayout {
         return @ptrCast(c.wgpuDeviceCreatePipelineLayout(@ptrCast(device), @ptrCast(&descriptor)));
     }
@@ -1533,9 +1472,6 @@ pub const Device = *opaque {
         c.wgpuDeviceDestroy(@ptrCast(device));
     }
 
-    // pub fn enumerateFeatures(device: Device, features: ?[*]FeatureName) usize {
-    //     return c.wgpuDeviceEnumerateFeatures(@ptrCast(device), features);
-    // }
 
     pub fn getLimits(device: Device, limits: *Limits) bool {
         return c.wgpuDeviceGetLimits(@ptrCast(device), limits);
@@ -1549,49 +1485,17 @@ pub const Device = *opaque {
         return c.wgpuDeviceHasFeature(@ptrCast(device), feature);
     }
 
-    // pub fn injectError(device: Device, err_type: ErrorType, message: []const u8) void {
-    //     c.wgpuDeviceInjectError(@ptrCast(device), err_type, StringView.cFromZig(message));
-    // }
-    //
-    // pub fn forceLoss(device: Device, reason: DeviceLostReason, message: []const u8) void {
-    //     c.wgpuDeviceForceLoss(@ptrCast(device), reason, StringView.cFromZig(message));
-    // }
-    //
-    // pub fn getAdapter(device: Device) Adapter {
-    //     return c.wgpuDeviceGetAdapter(@ptrCast(device));
-    // }
-
-    pub fn popErrorScope(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) bool {
-        return c.wgpuDevicePopErrorScope(@ptrCast(device), callback, userdata);
+    pub fn popErrorScope(device: Device, callback_info: PopErrorScopeCallbackInfo) Future {
+        return @bitCast(c.wgpuDevicePopErrorScope(@ptrCast(device), @bitCast(callback_info)));
     }
 
     pub fn pushErrorScope(device: Device, filter: ErrorFilter) void {
-        c.wgpuDevicePushErrorScope(@ptrCast(device), filter);
+        c.wgpuDevicePushErrorScope(@ptrCast(device), @intFromEnum(filter));
     }
-
-    // pub fn setDeviceLostCallback(
-    //     device: Device,
-    //     callback: DeviceLostCallback,
-    //     userdata: ?*anyopaque,
-    // ) void {
-    //     c.wgpuDeviceSetDeviceLostCallback(@ptrCast(device), callback, userdata);
-    // }
 
     pub fn setLabel(device: Device, label: []const u8) void {
         c.wgpuDeviceSetLabel(@ptrCast(device), StringView.cFromZig(label));
     }
-
-    // pub fn setLoggingCallback(device: Device, callback: LoggingCallback, userdata: ?*anyopaque) void {
-    //     c.wgpuDeviceSetLoggingCallback(@ptrCast(device), callback, userdata);
-    // }
-    //
-    // pub fn setUncapturedErrorCallback(device: Device, callback: ErrorCallback, userdata: ?*anyopaque) void {
-    //     c.wgpuDeviceSetUncapturedErrorCallback(@ptrCast(device), callback, userdata);
-    // }
-    //
-    // pub fn tick(device: Device) void {
-    //     c.wgpuDeviceTick(@ptrCast(device));
-    // }
 
     pub fn addRef(device: Device) void {
         c.wgpuDeviceAddRef(@ptrCast(device));
@@ -2002,39 +1906,6 @@ pub const QuerySet = *opaque {
 };
 
 pub const Queue = *opaque {
-    // pub fn copyExternalTextureForBrowser(
-    //     queue: Queue,
-    //     source: ImageCopyExternalTexture,
-    //     destination: ImageCopyTexture,
-    //     copy_size: Extent3D,
-    //     options: CopyTextureForBrowserOptions,
-    // ) void {
-    //     wgpuQueueCopyExternalTextureForBrowser(queue, &source, &destination, &copy_size, &options);
-    // }
-    // extern fn wgpuQueueCopyExternalTextureForBrowser(
-    //     queue: Queue,
-    //     source: *const ImageCopyExternalTexture,
-    //     destination: *const ImageCopyTexture,
-    //     copy_size: *const Extent3D,
-    //     options: *const CopyTextureForBrowserOptions,
-    // ) void;
-    //
-    // pub fn copyTextureForBrowser(
-    //     queue: Queue,
-    //     source: ImageCopyTexture,
-    //     destination: ImageCopyTexture,
-    //     copy_size: Extent3D,
-    //     options: CopyTextureForBrowserOptions,
-    // ) void {
-    //     wgpuQueueCopyTextureForBrowser(queue, &source, &destination, &copy_size, &options);
-    // }
-    // extern fn wgpuQueueCopyTextureForBrowser(
-    //     queue: Queue,
-    //     source: *const ImageCopyTexture,
-    //     destination: *const ImageCopyTexture,
-    //     copy_size: *const Extent3D,
-    //     options: *const CopyTextureForBrowserOptions,
-    // ) void;
 
     pub fn onSubmittedWorkDone(
         queue: Queue,
@@ -2042,35 +1913,27 @@ pub const Queue = *opaque {
         callback: QueueWorkDoneCallback,
         userdata: ?*anyopaque,
     ) void {
-        if (emscripten) {
-            const oswd = @extern(
-                *const fn (
-                    queue: Queue,
-                    callback: QueueWorkDoneCallback,
-                    userdata: ?*anyopaque,
-                ) callconv(.C) void,
-                .{ .name = "wgpuQueueOnSubmittedWorkDone" },
-            );
-            oswd(queue, callback, userdata);
-        } else {
-            const oswd = @extern(
-                *const fn (
-                    queue: Queue,
-                    signal_value: u64,
-                    callback: QueueWorkDoneCallback,
-                    userdata: ?*anyopaque,
-                ) callconv(.C) void,
-                .{ .name = "wgpuQueueOnSubmittedWorkDone" },
-            );
-            oswd(queue, signal_value, callback, userdata);
-        }
+        const oswd = @extern(
+            *const fn (
+                queue: Queue,
+                signal_value: u64,
+                callback: QueueWorkDoneCallback,
+                userdata: ?*anyopaque,
+            ) callconv(.C) void,
+            .{ .name = "wgpuQueueOnSubmittedWorkDone" },
+        );
+        oswd(queue, signal_value, callback, userdata);
     }
     pub fn setLabel(queue: Queue, label: []const u8) void {
         c.wgpuQueueSetLabel(queue, StringView.cFromZig(label));
     }
 
     pub fn submit(queue: Queue, commands: []const CommandBuffer) void {
-        c.wgpuQueueSubmit(@ptrCast(queue), @as(u32, @intCast(commands.len)), commands.ptr);
+        c.wgpuQueueSubmit(
+            @ptrCast(queue),
+            commands.len,
+            @ptrCast(commands.ptr),
+        );
     }
 
     pub fn writeBuffer(
@@ -2101,7 +1964,7 @@ pub const Queue = *opaque {
             @ptrCast(queue),
             @ptrCast(&destination),
             @as(*const anyopaque, @ptrCast(data.ptr)),
-            @as(usize, @intCast(data.len)) * @sizeOf(T),
+            data.len * @sizeOf(T),
             @ptrCast(&data_layout),
             @ptrCast(&write_size),
         );
@@ -2343,8 +2206,8 @@ pub const RenderPassEncoder = *opaque {
         c.wgpuRenderPassEncoderSetBindGroup(
             @ptrCast(render_pass_encoder),
             group_index,
-            group,
-            if (dynamic_offsets) |dynoff| @as(u32, @intCast(dynoff.len)) else 0,
+            @ptrCast(group),
+            if (dynamic_offsets) |dynoff| dynoff.len else 0,
             if (dynamic_offsets) |dynoff| dynoff.ptr else null,
         );
     }
@@ -2360,7 +2223,12 @@ pub const RenderPassEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        c.wgpuRenderPassEncoderSetIndexBuffer(@ptrCast(render_pass_encoder), buffer, format, offset, size);
+        c.wgpuRenderPassEncoderSetIndexBuffer(
+            @ptrCast(render_pass_encoder),
+            @ptrCast(buffer),
+            @intFromEnum(format),
+            offset,
+            size);
     }
 
     pub fn setLabel(render_pass_encoder: RenderPassEncoder, label: []const u8) void {
@@ -2368,7 +2236,7 @@ pub const RenderPassEncoder = *opaque {
     }
 
     pub fn setPipeline(render_pass_encoder: RenderPassEncoder, pipeline: RenderPipeline) void {
-        c.wgpuRenderPassEncoderSetPipeline(@ptrCast(render_pass_encoder), pipeline);
+        c.wgpuRenderPassEncoderSetPipeline(@ptrCast(render_pass_encoder), @ptrCast(pipeline));
     }
 
     pub fn setScissorRect(
@@ -2392,7 +2260,7 @@ pub const RenderPassEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        c.wgpuRenderPassEncoderSetVertexBuffer(@ptrCast(render_pass_encoder), slot, buffer, offset, size);
+        c.wgpuRenderPassEncoderSetVertexBuffer(@ptrCast(render_pass_encoder), slot, @ptrCast(buffer), offset, size);
     }
 
     pub fn setViewport(
@@ -2703,6 +2571,10 @@ test "enum_abi_compatibility" {
             slog.debug("\tchecked {s} == {s}.{s}", .{ c_field.name, decl.name, short_name });
         }
     }
+}
+
+test "wgpu_ref_all_decls" {
+    std.testing.refAllDeclsRecursive(@This());
 }
 
 fn normalizeCEnumField(full_field_name: []const u8, buf: []u8) []const u8 {
