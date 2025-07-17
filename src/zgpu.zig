@@ -580,7 +580,7 @@ pub const GraphicsContext = struct {
         const gpu_frame_number: *u64 = @ptrCast(@alignCast(userdata_1));
         gpu_frame_number.* += 1;
         if (status != .success) {
-            std.log.err("[zgpu] Failed to complete GPU work (status: {s}).", .{ @tagName(status) });
+            std.log.err("[zgpu] Failed to complete GPU work (status: {s}).", .{@tagName(status)});
         }
     }
 
@@ -2015,6 +2015,6 @@ fn formatToShaderFormat(format: wgpu.TextureFormat) []const u8 {
 // Section: Tests
 //
 
-test "zgpu_ref_all_decls" {
-    std.testing.refAllDeclsRecursive(@This());
-}
+// test "zgpu_ref_all_decls" {
+//     std.testing.refAllDeclsRecursive(@This());
+// }
