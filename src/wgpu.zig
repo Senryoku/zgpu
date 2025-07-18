@@ -210,6 +210,9 @@ pub const FeatureName = enum(u32) {
     subgroups = 0x00000012,
     texture_formats_tier1 = 0x00000013,
     texture_formats_tier2 = 0x00000014,
+    //...
+    chromium_experimental_timestamp_query_inside_passes = 0x00050003,
+    //...
 };
 
 pub const FilterMode = enum(u32) {
@@ -316,6 +319,9 @@ pub const SType = enum(u32) {
     surface_source_xcb_window = 0x00000009,
     surface_color_management = 0x0000000A,
     request_adapter_webxr_options = 0x0000000B,
+    //...
+    dawn_toggles_descriptor = 0x0005000A,
+    //...
 };
 
 pub const SamplerBindingType = enum(u32) {
@@ -677,6 +683,17 @@ pub const StringView = extern struct {
     }
 };
 
+// Can be chained in InstanceDescriptor
+// Can be chained in RequestAdapterOptions
+// Can be chained in DeviceDescriptor
+pub const DawnTogglesDescriptor = extern struct {
+    chain: ChainedStruct = .{ .next = null, .struct_type = .dawn_toggles_descriptor },
+    enabled_toggles_count: usize = 0,
+    enabled_toggles: ?[*]const [*:0]const u8 = null,
+    disabled_toggles_count: usize = 0,
+    disabled_toggles: ?[*]const [*:0]const u8 = null,
+};
+
 pub const AdapterInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     vendor_name: c.WGPUStringView = .{},
@@ -746,6 +763,14 @@ pub const CreateRenderPipelineAsyncCallbackInfo = extern struct {
     userdata_2: ?*anyopaque = null,
 };
 
+pub const QueueWorkDoneCallbackInfo = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    mode: CallbackMode = .undefined,
+    callback: ?QueueWorkDoneCallback = null,
+    userdata_1: ?*anyopaque = null,
+    userdata_2: ?*anyopaque = null,
+};
+
 pub const PopErrorScopeCallbackInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     mode: CallbackMode = .undefined,
@@ -779,28 +804,28 @@ pub const BindGroupDescriptor = extern struct {
 
 pub const BufferBindingLayout = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    binding_type: BufferBindingType = .uniform,
+    binding_type: BufferBindingType = .undefined,
     has_dynamic_offset: c.WGPUBool = c.WGPU_FALSE,
     min_binding_size: u64 = 0,
 };
 
 pub const SamplerBindingLayout = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    binding_type: SamplerBindingType = .filtering,
+    binding_type: SamplerBindingType = .undefined,
 };
 
 pub const TextureBindingLayout = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    sample_type: TextureSampleType = .float,
-    view_dimension: TextureViewDimension = .tvdim_2d,
+    sample_type: TextureSampleType = .undefined,
+    view_dimension: TextureViewDimension = .undefined,
     multisampled: c.WGPUBool = c.WGPU_FALSE,
 };
 
 pub const StorageTextureBindingLayout = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    access: StorageTextureAccess = .write_only,
-    format: TextureFormat,
-    view_dimension: TextureViewDimension = .tvdim_2d,
+    access: StorageTextureAccess = .undefined,
+    format: TextureFormat = .undefined,
+    view_dimension: TextureViewDimension = .undefined,
 };
 
 pub const BindGroupLayoutEntry = extern struct {
@@ -808,13 +833,10 @@ pub const BindGroupLayoutEntry = extern struct {
     binding: u32,
     visibility: ShaderStage,
     binding_array_size: u32 = 0,
-    buffer: BufferBindingLayout = .{ .binding_type = .undefined },
-    sampler: SamplerBindingLayout = .{ .binding_type = .undefined },
-    texture: TextureBindingLayout = .{ .sample_type = .undefined },
-    storage_texture: StorageTextureBindingLayout = .{
-        .access = .undefined,
-        .format = .undefined,
-    },
+    buffer: BufferBindingLayout = .{ .binding_type = .binding_not_used },
+    sampler: SamplerBindingLayout = .{ .binding_type = .binding_not_used },
+    texture: TextureBindingLayout = .{ .sample_type = .binding_not_used },
+    storage_texture: StorageTextureBindingLayout = .{ .access = .binding_not_used },
 };
 
 pub const BindGroupLayoutDescriptor = extern struct {
@@ -1913,23 +1935,14 @@ pub const QuerySet = *opaque {
 };
 
 pub const Queue = *opaque {
+
     pub fn onSubmittedWorkDone(
         queue: Queue,
-        signal_value: u64,
-        callback: QueueWorkDoneCallback,
-        userdata: ?*anyopaque,
-    ) void {
-        const oswd = @extern(
-            *const fn (
-                queue: Queue,
-                signal_value: u64,
-                callback: QueueWorkDoneCallback,
-                userdata: ?*anyopaque,
-            ) callconv(.C) void,
-            .{ .name = "wgpuQueueOnSubmittedWorkDone" },
-        );
-        oswd(queue, signal_value, callback, userdata);
+        callback_info: QueueWorkDoneCallbackInfo,
+    ) Future {
+        return @bitCast(c.wgpuQueueOnSubmittedWorkDone(@ptrCast(queue), @bitCast(callback_info)));
     }
+
     pub fn setLabel(queue: Queue, label: []const u8) void {
         c.wgpuQueueSetLabel(queue, StringView.cFromZig(label));
     }

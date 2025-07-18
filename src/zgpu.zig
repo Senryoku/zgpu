@@ -132,7 +132,15 @@ pub const GraphicsContext = struct {
 
         // const instance = if (emscripten) wgpu.createInstance(.{}) else dniGetWgpuInstance(native_instance).?;
 
-        const instance = wgpu.createInstance(null);
+
+
+
+        const instance_features: []const wgpu.InstanceFeatureName = &.{ .timed_wait_any };
+        const instance = wgpu.createInstance(.{
+            .required_feature_count = instance_features.len,
+            .required_features = @ptrCast(instance_features.ptr),
+            .required_limits = &.{ .timed_wait_any_max_count = 16 }, // no idea what a good number is for this
+        });
 
         const adapter = adapter: {
             const Response = struct {
@@ -149,7 +157,10 @@ pub const GraphicsContext = struct {
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
                     _ = userdata_2;
-                    if (status != .success) std.log.err("Adapter Error: {s}", .{wgpu.StringView.zigFromC(message) orelse "no message"});
+                    if (status != .success) std.log.err(
+                        "[zgpu] Adapter Error: {s}",
+                        .{wgpu.StringView.zigFromC(message) orelse "no message"},
+                    );
                     const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.adapter = adapter;
@@ -163,7 +174,7 @@ pub const GraphicsContext = struct {
 
             var response = Response{};
             const callback_info = wgpu.RequestAdapterCallbackInfo{
-                .mode = .wait_any_only,
+                .mode = .allow_process_events,
                 .callback = callback,
                 .userdata_1 = @ptrCast(&response),
             };
@@ -171,9 +182,12 @@ pub const GraphicsContext = struct {
             var futures = [_]wgpu.FutureWaitInfo{.{
                 .future = instance.requestAdapter(adapter_options, callback_info),
             }};
-            const adapter_wait_status = instance.waitAny(&futures, 0);
+            const adapter_wait_status = instance.waitAny(&futures, 10_000_000);
             if (adapter_wait_status != .success) {
-                std.log.err("Failed to wait for GPU adapter request (status: {s}).", .{@tagName(adapter_wait_status)});
+                std.log.err(
+                    "[zgpu] Failed to wait for GPU adapter request (status: {s}).",
+                    .{@tagName(adapter_wait_status)},
+                );
                 return error.NoGraphicsAdapter;
             }
 
@@ -186,7 +200,7 @@ pub const GraphicsContext = struct {
             // }
 
             if (response.status != .success) {
-                std.log.err("Failed to request GPU adapter (status: {s}).", .{@tagName(response.status)});
+                std.log.err("[zgpu] Failed to request GPU adapter (status: {s}).", .{@tagName(response.status)});
                 return error.NoGraphicsAdapter;
             }
             break :adapter response.adapter;
@@ -226,7 +240,10 @@ pub const GraphicsContext = struct {
                     userdata_2: ?*anyopaque,
                 ) callconv(.C) void {
                     _ = userdata_2;
-                    if (status != .success) std.log.err("Device Error: {s}", .{wgpu.StringView.zigFromC(message) orelse "no message"});
+                    if (status != .success) std.log.err(
+                        "[zgpu] Device Error: {s}",
+                        .{wgpu.StringView.zigFromC(message) orelse "no message"},
+                    );
                     const response = @as(*Response, @ptrCast(@alignCast(userdata_1)));
                     response.status = status;
                     response.device = device;
@@ -244,7 +261,10 @@ pub const GraphicsContext = struct {
                     _ = device;
                     _ = userdata_1;
                     _ = userdata_2;
-                    std.log.err("Device lost:\n\tReason: {s}\n\tMessage: {s}", .{ @tagName(reason), wgpu.StringView.zigFromC(message) orelse "no message" });
+                    std.log.err(
+                        "[zgpu] Device lost:\n\tReason: {s}\n\tMessage: {s}",
+                        .{ @tagName(reason), wgpu.StringView.zigFromC(message) orelse "no message" },
+                    );
                 }
             }).callback;
 
@@ -259,33 +279,35 @@ pub const GraphicsContext = struct {
                     _ = device;
                     _ = userdata_1;
                     _ = userdata_2;
-                    std.log.err("Uncaptured Error:\n\tError Type: {s}\n\tMessage: {s}", .{ @tagName(err_type), wgpu.StringView.zigFromC(message) orelse "no message" });
+                    std.log.err(
+                        "[zgpu] Uncaptured Error:\n\tError Type: {s}\n\tMessage: {s}",
+                        .{ @tagName(err_type), wgpu.StringView.zigFromC(message) orelse "no message" },
+                    );
                 }
             }).callback;
 
-            // var toggles: [2][*:0]const u8 = undefined;
-            // var num_toggles: usize = 0;
-            // if (zgpu_options.dawn_skip_validation) {
-            //     toggles[num_toggles] = "skip_validation";
-            //     num_toggles += 1;
-            // }
-            // if (zgpu_options.dawn_allow_unsafe_apis) {
-            //     toggles[num_toggles] = "allow_unsafe_apis";
-            //     num_toggles += 1;
-            // }
-            // const dawn_toggles = wgpu.DawnTogglesDescriptor{
-            //     .chain = .{ .next = null, .struct_type = .dawn_toggles_descriptor },
-            //     .enabled_toggles_count = num_toggles,
-            //     .enabled_toggles = &toggles,
-            // };
+            var toggles: [2][*:0]const u8 = undefined;
+            var num_toggles: usize = 0;
+            if (zgpu_options.dawn_skip_validation) {
+                toggles[num_toggles] = "skip_validation";
+                num_toggles += 1;
+            }
+            if (zgpu_options.dawn_allow_unsafe_apis) {
+                toggles[num_toggles] = "allow_unsafe_apis";
+                num_toggles += 1;
+            }
+            const dawn_toggles = wgpu.DawnTogglesDescriptor{
+                .enabled_toggles_count = num_toggles,
+                .enabled_toggles = &toggles,
+            };
 
             const device_descriptor = wgpu.DeviceDescriptor{
-                // .next_in_chain = @ptrCast(&dawn_toggles),
+                .next_in_chain = @ptrCast(&dawn_toggles),
                 .required_features_count = options.required_features.len,
                 .required_features = options.required_features.ptr,
                 .required_limits = options.required_limits,
                 .device_lost_callback_info = .{
-                    .mode = .allow_spontaneous,
+                    .mode = .allow_process_events,
                     .callback = device_lost_callback,
                 },
                 .uncaptured_error_callback_info = .{
@@ -304,9 +326,12 @@ pub const GraphicsContext = struct {
             var futures = [_]wgpu.FutureWaitInfo{.{
                 .future = adapter.requestDevice(device_descriptor, callback_info),
             }};
-            const device_wait_status = instance.waitAny(&futures, 0);
+            const device_wait_status = instance.waitAny(&futures, 10_000_000);
             if (device_wait_status != .success) {
-                std.log.err("Failed to wait for GPU device request (status: {s}).", .{@tagName(device_wait_status)});
+                std.log.err(
+                    "[zgpu] Failed to wait for GPU device request (status: {s}).",
+                    .{@tagName(device_wait_status)},
+                );
                 return error.NoGraphicsDevice;
             }
 
@@ -319,7 +344,7 @@ pub const GraphicsContext = struct {
             // }
 
             if (response.status != .success) {
-                std.log.err("Failed to request GPU device (status: {s}).", .{@tagName(response.status)});
+                std.log.err("[zgpu] Failed to request GPU device (status: {s}).", .{@tagName(response.status)});
                 return error.NoGraphicsDevice;
             }
             break :device response.device;
@@ -371,24 +396,22 @@ pub const GraphicsContext = struct {
     }
 
     pub fn destroy(gctx: *GraphicsContext, allocator: std.mem.Allocator) void {
-        // // Wait for the GPU to finish all encoded commands.
-        // while (gctx.stats.cpu_frame_number != gctx.stats.gpu_frame_number) {
-        //     gctx.device.tick();
-        // }
-        //
-        // // Wait for all outstanding mapAsync() calls to complete.
-        // wait_loop: while (true) {
-        //     gctx.device.tick();
-        //     var i: u32 = 0;
-        //     while (i < gctx.uniforms.stage.num) : (i += 1) {
-        //         if (gctx.uniforms.stage.buffers[i].slice == null) {
-        //             continue :wait_loop;
-        //         }
-        //     }
-        //     break;
-        // }
+        // Wait for the GPU to finish all encoded commands.
+        while (gctx.stats.cpu_frame_number != gctx.stats.gpu_frame_number) {
+            gctx.instance.processEvents();
+        }
 
-        gctx.instance.processEvents();
+        // Wait for all outstanding mapAsync() calls to complete.
+        wait_loop: while (true) {
+            gctx.instance.processEvents();
+            var i: u32 = 0;
+            while (i < gctx.uniforms.stage.num) : (i += 1) {
+                if (gctx.uniforms.stage.buffers[i].slice == null) {
+                    continue :wait_loop;
+                }
+            }
+            break;
+        }
 
         gctx.mipgens.deinit();
         gctx.pipeline_layout_pool.deinit(allocator);
@@ -480,6 +503,7 @@ pub const GraphicsContext = struct {
                 0,
                 uniforms_buffer_size,
                 .{
+                    .mode = .allow_process_events,
                     .callback = uniformsMappedCallback,
                     .userdata_1 = @ptrCast(&gctx.uniforms.stage.buffers[current]),
                 },
@@ -506,6 +530,7 @@ pub const GraphicsContext = struct {
                         return;
                     }
                 }
+                gctx.instance.processEvents();
             }
         }
 
@@ -561,7 +586,15 @@ pub const GraphicsContext = struct {
         command_buffers.append(stage_commands) catch unreachable;
         command_buffers.appendSlice(commands) catch unreachable;
 
-        gctx.queue.onSubmittedWorkDone(0, gpuWorkDone, @ptrCast(&gctx.stats.gpu_frame_number));
+        // This will apply only to the work submitted last frame
+        _ = gctx.queue.onSubmittedWorkDone(.{
+            .mode = .allow_process_events,
+            .callback = gpuWorkDone,
+            .userdata_1 = @ptrCast(&gctx.stats.gpu_frame_number),
+        });
+
+        gctx.instance.processEvents();
+
         gctx.queue.submit(command_buffers.slice());
 
         gctx.stats.tick(gctx.window_provider.getTime());
@@ -575,12 +608,14 @@ pub const GraphicsContext = struct {
         userdata_1: ?*anyopaque,
         userdata_2: ?*anyopaque,
     ) callconv(.C) void {
-        _ = message;
         _ = userdata_2;
         const gpu_frame_number: *u64 = @ptrCast(@alignCast(userdata_1));
         gpu_frame_number.* += 1;
         if (status != .success) {
-            std.log.err("[zgpu] Failed to complete GPU work (status: {s}).", .{@tagName(status)});
+            std.log.err(
+                "[zgpu] Failed to complete GPU work: {s}",
+                .{ wgpu.StringView.zigFromC(message) orelse "no message" },
+            );
         }
     }
 
@@ -593,6 +628,8 @@ pub const GraphicsContext = struct {
 
         var maybe_surface_tex = wgpu.SurfaceTexture{};
         gctx.surface.getCurrentTexture(&maybe_surface_tex);
+
+        gctx.stats.tick(gctx.window_provider.getTime());
 
         if (status == .success and maybe_surface_tex.status == .success_optimal) return .normal_execution;
 
@@ -783,11 +820,11 @@ pub const GraphicsContext = struct {
         pipeline_layout: PipelineLayoutHandle,
         descriptor: wgpu.RenderPipelineDescriptor,
         result: *RenderPipelineHandle,
-    ) void {
+    ) !wgpu.Future {
         var desc = descriptor;
         desc.layout = gctx.lookupResource(pipeline_layout) orelse null;
 
-        const op = allocator.create(AsyncCreateOpRender) catch unreachable;
+        const op = try allocator.create(AsyncCreateOpRender);
         op.* = .{
             .gctx = gctx,
             .result = result,
@@ -795,12 +832,12 @@ pub const GraphicsContext = struct {
             .allocator = allocator,
         };
         const callback_info = wgpu.CreateRenderPipelineAsyncCallbackInfo{
-            .mode = .wait_any_only,
+            .mode = .allow_process_events,
             .callback = AsyncCreateOpRender.create,
             .userdata_1 = @ptrCast(op),
             .userdata_2 = null,
         };
-        _ = gctx.device.createRenderPipelineAsync(desc, callback_info);
+        return gctx.device.createRenderPipelineAsync(desc, callback_info);
     }
 
     pub fn createComputePipeline(
@@ -851,11 +888,11 @@ pub const GraphicsContext = struct {
         pipeline_layout: PipelineLayoutHandle,
         descriptor: wgpu.ComputePipelineDescriptor,
         result: *ComputePipelineHandle,
-    ) void {
+    ) !wgpu.Future {
         var desc = descriptor;
         desc.layout = gctx.lookupResource(pipeline_layout) orelse null;
 
-        const op = allocator.create(AsyncCreateOpCompute) catch unreachable;
+        const op = try allocator.create(AsyncCreateOpCompute);
         op.* = .{
             .gctx = gctx,
             .result = result,
@@ -863,12 +900,12 @@ pub const GraphicsContext = struct {
             .allocator = allocator,
         };
         const callback_info = wgpu.CreateComputePipelineAsyncCallbackInfo{
-            .mode = .wait_any_only,
+            .mode = .allow_process_events,
             .callback = AsyncCreateOpCompute.create,
             .userdata_1 = @ptrCast(op),
             .userdata_2 = null,
         };
-        _ = gctx.device.createComputePipelineAsync(desc, callback_info);
+        return gctx.device.createComputePipelineAsync(desc, callback_info);
     }
 
     pub fn createBindGroup(
@@ -924,6 +961,9 @@ pub const GraphicsContext = struct {
     pub fn createBindGroupLayout(
         gctx: *GraphicsContext,
         entries: []const wgpu.BindGroupLayoutEntry,
+        opt: struct {
+            label: ?[]const u8 = null,
+        },
     ) BindGroupLayoutHandle {
         assert(entries.len > 0 and entries.len <= max_num_bindings_per_group);
 
@@ -931,6 +971,7 @@ pub const GraphicsContext = struct {
             .gpuobj = gctx.device.createBindGroupLayout(.{
                 .entry_count = @intCast(entries.len),
                 .entries = entries.ptr,
+                .label = if (opt.label) |label_in| wgpu.StringView.cFromZig(label_in) else wgpu.StringView.initC(),
             }),
             .num_entries = @intCast(entries.len),
         };
@@ -973,6 +1014,27 @@ pub const GraphicsContext = struct {
         });
 
         return gctx.pipeline_layout_pool.addResource(gctx.*, info);
+    }
+
+    /// Helper to await async calls for simple cases (blocking)
+    /// timed_wait_any feature must be enabled
+    /// timeout_ns must be greater than zero
+    pub fn awaitFuture(gctx: GraphicsContext, future: wgpu.Future, timeout_ns: usize, opt: struct {
+        label: ?[]const u8 = null,
+    }) !void {
+        assert(timeout_ns > 0); // WaitAny doesn't actually block if timeout is 0, so this function would be useless
+        var futures = [_]wgpu.FutureWaitInfo{.{ .future = future }};
+        const wait_status = gctx.instance.waitAny(&futures, timeout_ns);
+        if (wait_status != .success) {
+            std.log.err(
+                "[zgpu] Failure ({s}) waiting for async operation {?s}",
+                .{ @tagName(wait_status), opt.label },
+            );
+            return switch(wait_status) {
+                .timed_out => error.WaitAnyTimedOut,
+                else => error.WaitAnyUnknownError,
+            };
+        }
     }
 
     pub fn lookupResource(gctx: GraphicsContext, handle: anytype) ?HandleToGpuResourceType(@TypeOf(handle)) {
@@ -1358,7 +1420,7 @@ pub fn createRenderPipelineSimple(
     rt_format: wgpu.TextureFormat,
     depth_state: ?wgpu.DepthStencilState,
     out_pipe: *RenderPipelineHandle,
-) void {
+) !?wgpu.Future {
     const pl = gctx.createPipelineLayout(bgls);
     defer gctx.releaseResource(pl);
 
@@ -1394,9 +1456,10 @@ pub fn createRenderPipelineSimple(
     };
 
     if (enable_async_shader_compilation) {
-        gctx.createRenderPipelineAsync(allocator, pl, pipe_desc, out_pipe);
+        return try gctx.createRenderPipelineAsync(allocator, pl, pipe_desc, out_pipe);
     } else {
         out_pipe.* = gctx.createRenderPipeline(pl, pipe_desc);
+        return null;
     }
 }
 
