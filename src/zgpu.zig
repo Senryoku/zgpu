@@ -629,8 +629,6 @@ pub const GraphicsContext = struct {
         var maybe_surface_tex = wgpu.SurfaceTexture{};
         gctx.surface.getCurrentTexture(&maybe_surface_tex);
 
-        gctx.stats.tick(gctx.window_provider.getTime());
-
         if (status == .success and maybe_surface_tex.status == .success_optimal) return .normal_execution;
 
         // reconfigure surface if in any state other than .optimal
