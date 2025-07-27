@@ -21,7 +21,7 @@
             .hash = "system_sdk-0.3.0-dev-alwUNnYaaAJAtIdE2fg4NQfDqEKs7QCXy_qYukAOBfmF",
         },
         .zdawn_x86_64_windows_gnu = .{
-            .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/fa89915576f8f8e6c50c97eef894c93e244b318b.tar.gz",
+            .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/f3ca53a31d90f3b590bf57e7c015c2e0109c7683.tar.gz",
             .hash = "N-V-__8AACTslAM8rYKe4WpKOW7hADa5v5epccQ4thv2B6We",
             .lazy = true,
         },
