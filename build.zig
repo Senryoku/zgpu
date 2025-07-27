@@ -175,7 +175,7 @@ pub fn addLibraryPathsTo(compile_step: *std.Build.Step.Compile) void {
     const target = compile_step.rootModuleTarget();
     switch (target.os.tag) {
         .windows => {
-            if (b.lazyDependency("dawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
+            if (b.lazyDependency("zdawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
             }
         },

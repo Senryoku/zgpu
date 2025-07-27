@@ -20,9 +20,9 @@
             .url = "https://github.com/zig-gamedev/system_sdk/archive/c0dbf11cdc17da5904ea8a17eadc54dee26567ec.tar.gz",
             .hash = "system_sdk-0.3.0-dev-alwUNnYaaAJAtIdE2fg4NQfDqEKs7QCXy_qYukAOBfmF",
         },
-        .dawn_x86_64_windows_gnu = .{
-            .url = "https://github.com/michal-z/webgpu_dawn-x86_64-windows-gnu/archive/d3a68014e6b6b53fd330a0ccba99e4dcfffddae5.tar.gz",
-            .hash = "N-V-__8AAGsYnAT5RIzeAu881RveLghQ1EidqgVBVx10gVTo",
+        .zdawn_x86_64_windows_gnu = .{
+            .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/fa89915576f8f8e6c50c97eef894c93e244b318b.tar.gz",
+            .hash = "N-V-__8AACTslAM8rYKe4WpKOW7hADa5v5epccQ4thv2B6We",
             .lazy = true,
         },
         .dawn_x86_64_linux_gnu = .{
