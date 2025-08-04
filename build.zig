@@ -101,7 +101,6 @@ pub fn build(b: *std.Build) void {
     }
 
     const options_module = options_step.createModule();
-    const wgpu_headers_path = b.dependency("webgpu_headers", .{}).path("");
 
     const root = b.addModule("root", .{
         .root_source_file = b.path("src/zgpu.zig"),
@@ -120,12 +119,15 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(zdawn);
     linkSystemDeps(b, zdawn);
     addLibraryPathsTo(zdawn);
+
+    // prebuilt libs from os-specific dependency
     zdawn.linkSystemLibrary("webgpu_dawn");
-    zdawn.linkSystemLibrary("mingw_helpers");
+    if (zdawn.rootModuleTarget().os.tag == .windows) zdawn.linkSystemLibrary("mingw_helpers");
+
     zdawn.linkLibC();
     zdawn.linkLibCpp();
     zdawn.addIncludePath(b.path("src"));
-    zdawn.addIncludePath(wgpu_headers_path);
+    zdawn.addIncludePath(b.path("include"));
 
     const test_step = b.step("test", "Run zgpu tests");
     const tests = b.addTest(.{
@@ -134,8 +136,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    tests.addIncludePath(wgpu_headers_path);
     tests.linkLibrary(zdawn);
+    tests.addIncludePath(b.path("include"));
     linkSystemDeps(b, tests);
     addLibraryPathsTo(tests);
     b.installArtifact(tests);

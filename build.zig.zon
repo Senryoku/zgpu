@@ -21,7 +21,7 @@
             .hash = "system_sdk-0.3.0-dev-alwUNnYaaAJAtIdE2fg4NQfDqEKs7QCXy_qYukAOBfmF",
         },
         .zdawn_x86_64_windows_gnu = .{
-            .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/f3ca53a31d90f3b590bf57e7c015c2e0109c7683.tar.gz",
+            .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/dffdb96a43ad3e24cd4a56949bb03fdd3fcf95b3.tar.gz",
             .hash = "N-V-__8AACTslAM8rYKe4WpKOW7hADa5v5epccQ4thv2B6We",
             .lazy = true,
         },
@@ -44,10 +44,6 @@
             .url = "https://github.com/michal-z/webgpu_dawn-x86_64-macos/archive/901716b10b31ce3e0d3fe479326b41e91d59c661.tar.gz",
             .hash = "N-V-__8AAIz1QAKx8C8vft2YoHjGTjEAkH2QMR2UiAo8xZJ-",
             .lazy = true,
-        },
-        .webgpu_headers = .{
-            .url = "https://github.com/a-day-old-bagel/webgpu-headers/archive/5a6c26300f21de0c42732f441f8fd5e8d18562b0.tar.gz",
-            .hash = "N-V-__8AAC6UCADq8z5G54i45wUJEp8GVDppgucVOjrIlb2v",
         },
     },
 }

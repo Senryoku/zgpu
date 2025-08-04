@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @cImport(@cInclude("webgpu.h"));
+const c = @cImport(@cInclude("webgpu/webgpu.h"));
 pub const slog = std.log.scoped(.wgpu);
 
 pub const True = OptionalBool.true;
