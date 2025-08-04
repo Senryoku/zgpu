@@ -22,7 +22,7 @@
         },
         .zdawn_x86_64_windows_gnu = .{
             .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/dffdb96a43ad3e24cd4a56949bb03fdd3fcf95b3.tar.gz",
-            .hash = "N-V-__8AACTslAM8rYKe4WpKOW7hADa5v5epccQ4thv2B6We",
+            .hash = "N-V-__8AAAoJ8AF1BpWg4V68pUlEOKxApxVRhuQEN2etL9K8",
             .lazy = true,
         },
         .dawn_x86_64_linux_gnu = .{
