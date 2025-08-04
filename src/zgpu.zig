@@ -1186,7 +1186,7 @@ pub const GraphicsContext = struct {
                 storageTextureEntry(3, .{ .compute = true }, .write_only, format, .tvdim_2d),
                 storageTextureEntry(4, .{ .compute = true }, .write_only, format, .tvdim_2d),
                 storageTextureEntry(5, .{ .compute = true }, .write_only, format, .tvdim_2d),
-            });
+            }, .{});
 
             const pipeline_layout = gctx.createPipelineLayout(&.{
                 mipgen.bind_group_layout,
