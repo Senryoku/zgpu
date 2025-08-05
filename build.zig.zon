@@ -21,13 +21,13 @@
             .hash = "system_sdk-0.3.0-dev-alwUNnYaaAJAtIdE2fg4NQfDqEKs7QCXy_qYukAOBfmF",
         },
         .zdawn_x86_64_windows_gnu = .{
-            .url = "https://github.com/a-day-old-bagel/libzdawn-x86_64-windows-gnu/archive/dffdb96a43ad3e24cd4a56949bb03fdd3fcf95b3.tar.gz",
-            .hash = "N-V-__8AAAoJ8AF1BpWg4V68pUlEOKxApxVRhuQEN2etL9K8",
+            .url = "https://github.com/a-day-old-bagel/libzdawn-binaries/archive/6f4aa6f43f79eb200b0c865907f62a8a95310786.tar.gz",
+            .hash = "zdawn_x86_64_windows_gnu-0.14.0-dev-3fGi06kj7AGhszK_2GGSLYhxe8AAI3h8NgrREPQxdjZy",
             .lazy = true,
         },
-        .dawn_x86_64_linux_gnu = .{
-            .url = "https://github.com/michal-z/webgpu_dawn-x86_64-linux-gnu/archive/7d70db023bf254546024629cbec5ee6113e12a42.tar.gz",
-            .hash = "N-V-__8AAK7XUQNKNRnv1J6i189jtURJKjp3HTftoyD4Y4CB",
+        .zdawn_x86_64_linux_gnu = .{
+            .url = "https://github.com/a-day-old-bagel/libzdawn-binaries/archive/83a7c48136bef8bf7f54586f6a2444a627509679.tar.gz",
+            .hash = "zdawn_x86_64_linux_gnu-0.14.0-dev-uKseL9PnvAL-jlweix9fqtXH2M1Knu9oA8Aznjv6XwnG",
             .lazy = true,
         },
         .dawn_aarch64_linux_gnu = .{
