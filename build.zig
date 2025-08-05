@@ -144,6 +144,31 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(tests).step);
 }
 
+/// Call this for your exe to copy dxcompiler.dll and dxil.dll to your exe's directory from zwindows
+pub fn installDxcFrom(exe: *std.Build.Step.Compile, zwindows_dep_name: []const u8) void {
+    const b = exe.step.owner;
+    exe.step.dependOn(
+        &b.addInstallFileWithDir(
+            .{ .dependency = .{
+                .dependency = b.dependency(zwindows_dep_name, .{}),
+                .sub_path = "bin/x64/dxcompiler.dll",
+            } },
+            .bin,
+            "dxcompiler.dll",
+        ).step,
+    );
+    exe.step.dependOn(
+        &b.addInstallFileWithDir(
+            .{ .dependency = .{
+                .dependency = b.dependency(zwindows_dep_name, .{}),
+                .sub_path = "bin/x64/dxil.dll",
+            } },
+            .bin,
+            "dxil.dll",
+        ).step,
+    );
+}
+
 pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void {
     switch (compile_step.rootModuleTarget().os.tag) {
         .windows => {
