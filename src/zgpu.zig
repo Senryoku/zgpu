@@ -138,7 +138,7 @@ pub const GraphicsContext = struct {
                     adapter: wgpu.Adapter,
                     message: ?[*:0]const u8,
                     userdata: ?*anyopaque,
-                ) callconv(.C) void {
+                ) callconv(.c) void {
                     _ = message;
                     const response = @as(*Response, @ptrCast(@alignCast(userdata)));
                     response.status = status;
@@ -197,7 +197,7 @@ pub const GraphicsContext = struct {
                     device: wgpu.Device,
                     message: ?[*:0]const u8,
                     userdata: ?*anyopaque,
-                ) callconv(.C) void {
+                ) callconv(.c) void {
                     _ = message;
                     const response = @as(*Response, @ptrCast(@alignCast(userdata)));
                     response.status = status;
@@ -374,7 +374,7 @@ pub const GraphicsContext = struct {
         gctx.uniformsNextStagingBuffer();
     }
 
-    fn uniformsMappedCallback(status: wgpu.BufferMapAsyncStatus, userdata: ?*anyopaque) callconv(.C) void {
+    fn uniformsMappedCallback(status: wgpu.BufferMapAsyncStatus, userdata: ?*anyopaque) callconv(.c) void {
         const usb = @as(*UniformsStagingBuffer, @ptrCast(@alignCast(userdata)));
         assert(usb.slice == null);
         if (status == .success) {
@@ -483,7 +483,7 @@ pub const GraphicsContext = struct {
         gctx.uniformsNextStagingBuffer();
     }
 
-    fn gpuWorkDone(status: wgpu.QueueWorkDoneStatus, userdata: ?*anyopaque) callconv(.C) void {
+    fn gpuWorkDone(status: wgpu.QueueWorkDoneStatus, userdata: ?*anyopaque) callconv(.c) void {
         const gpu_frame_number: *u64 = @ptrCast(@alignCast(userdata));
         gpu_frame_number.* += 1;
         if (status != .success) {
@@ -632,7 +632,7 @@ pub const GraphicsContext = struct {
             pipeline: wgpu.RenderPipeline,
             message: ?[*:0]const u8,
             userdata: ?*anyopaque,
-        ) callconv(.C) void {
+        ) callconv(.c) void {
             const op = @as(*AsyncCreateOpRender, @ptrCast(@alignCast(userdata)));
             if (status == .success) {
                 op.result.* = op.gctx.render_pipeline_pool.addResource(
@@ -693,7 +693,7 @@ pub const GraphicsContext = struct {
             pipeline: wgpu.ComputePipeline,
             message: ?[*:0]const u8,
             userdata: ?*anyopaque,
-        ) callconv(.C) void {
+        ) callconv(.c) void {
             const op = @as(*AsyncCreateOpCompute, @ptrCast(@alignCast(userdata)));
             if (status == .success) {
                 op.result.* = op.gctx.compute_pipeline_pool.addResource(
@@ -1762,21 +1762,21 @@ fn msgSend(obj: anytype, sel_name: [:0]const u8, args: anytype, comptime ReturnT
     const args_meta = @typeInfo(@TypeOf(args)).@"struct".fields;
 
     const FnType = switch (args_meta.len) {
-        0 => *const fn (@TypeOf(obj), objc.SEL) callconv(.C) ReturnType,
-        1 => *const fn (@TypeOf(obj), objc.SEL, args_meta[0].type) callconv(.C) ReturnType,
+        0 => *const fn (@TypeOf(obj), objc.SEL) callconv(.c) ReturnType,
+        1 => *const fn (@TypeOf(obj), objc.SEL, args_meta[0].type) callconv(.c) ReturnType,
         2 => *const fn (
             @TypeOf(obj),
             objc.SEL,
             args_meta[0].type,
             args_meta[1].type,
-        ) callconv(.C) ReturnType,
+        ) callconv(.c) ReturnType,
         3 => *const fn (
             @TypeOf(obj),
             objc.SEL,
             args_meta[0].type,
             args_meta[1].type,
             args_meta[2].type,
-        ) callconv(.C) ReturnType,
+        ) callconv(.c) ReturnType,
         4 => *const fn (
             @TypeOf(obj),
             objc.SEL,
@@ -1784,7 +1784,7 @@ fn msgSend(obj: anytype, sel_name: [:0]const u8, args: anytype, comptime ReturnT
             args_meta[1].type,
             args_meta[2].type,
             args_meta[3].type,
-        ) callconv(.C) ReturnType,
+        ) callconv(.c) ReturnType,
         else => @compileError("[zgpu] Unsupported number of args"),
     };
 
@@ -1798,7 +1798,7 @@ fn logUnhandledError(
     err_type: wgpu.ErrorType,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void {
+) callconv(.c) void {
     _ = userdata;
     switch (err_type) {
         .no_error => std.log.info("[zgpu] No error: {?s}", .{message}),
@@ -1855,14 +1855,14 @@ fn formatToShaderFormat(format: wgpu.TextureFormat) []const u8 {
     };
 }
 
-usingnamespace if (emscripten) struct {
-    // Missing symbols
-    var wgpuDeviceTickWarnPrinted: bool = false;
-    pub export fn wgpuDeviceTick() void {
+// Missing symbols
+var wgpuDeviceTickWarnPrinted: if (emscripten) bool else void = if (emscripten) false else {};
+pub export fn wgpuDeviceTick() void {
+    if (emscripten) {
         if (!wgpuDeviceTickWarnPrinted) {
             std.log.warn("wgpuDeviceTick(): this fn should be avoided! RequestAnimationFrame() is advised for smooth rendering in browser.", .{});
             wgpuDeviceTickWarnPrinted = true;
         }
         emscripten_sleep(1);
     }
-} else struct {};
+}
