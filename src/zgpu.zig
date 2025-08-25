@@ -1858,7 +1858,7 @@ fn formatToShaderFormat(format: wgpu.TextureFormat) []const u8 {
 
 // Missing symbols
 var wgpuDeviceTickWarnPrinted: if (emscripten) bool else void = if (emscripten) false else {};
-pub export fn wgpuDeviceTick() void {
+pub export fn emscripten_wgpuDeviceTick() void {
     if (emscripten) {
         if (!wgpuDeviceTickWarnPrinted) {
             std.log.warn("wgpuDeviceTick(): this fn should be avoided! RequestAnimationFrame() is advised for smooth rendering in browser.", .{});
