@@ -471,12 +471,13 @@ pub const GraphicsContext = struct {
         defer stage_commands.release();
 
         // TODO: We support up to 32 command buffers for now. Make it more robust.
-        var command_buffers = std.BoundedArray(wgpu.CommandBuffer, 32).init(0) catch unreachable;
-        command_buffers.append(stage_commands) catch unreachable;
-        command_buffers.appendSlice(commands) catch unreachable;
+        var buffer: [32]wgpu.CommandBuffer = undefined;
+        var command_buffers = std.ArrayListUnmanaged(wgpu.CommandBuffer).initBuffer(&buffer);
+        command_buffers.appendAssumeCapacity(stage_commands);
+        command_buffers.appendSliceAssumeCapacity(commands);
 
         gctx.queue.onSubmittedWorkDone(0, gpuWorkDone, @ptrCast(&gctx.stats.gpu_frame_number));
-        gctx.queue.submit(command_buffers.slice());
+        gctx.queue.submit(command_buffers.items);
 
         gctx.stats.tick(gctx.window_provider.getTime());
 
