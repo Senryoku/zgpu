@@ -406,6 +406,7 @@ pub const StructType = enum(u32) {
     surface_descriptor_from_canvas_html_selector = 0x00000004,
     shader_module_spirv_descriptor = 0x00000005,
     shader_module_wgsl_descriptor = 0x00000006,
+    primitive_depth_clip_control = 0x00000007,
     surface_descriptor_from_wayland_surface = 0x00000008,
     surface_descriptor_from_android_native_window = 0x00000009,
     surface_descriptor_from_windows_core_window = 0x0000000B,
@@ -913,6 +914,15 @@ pub const PrimitiveState = extern struct {
     strip_index_format: IndexFormat = .undef,
     front_face: FrontFace = .ccw,
     cull_mode: CullMode = .none,
+};
+
+// Can be chained in PrimitiveState
+pub const PrimitiveDepthClipControl = extern struct {
+    chain: ChainedStruct = .{
+        .next = null,
+        .struct_type = .primitive_depth_clip_control,
+    },
+    unclipped_depth: bool,
 };
 
 pub const StencilFaceState = extern struct {
