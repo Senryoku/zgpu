@@ -112,6 +112,7 @@ pub fn build(b: *std.Build) void {
 
     const zdawn = b.addLibrary(.{
         .name = "zdawn",
+        .linkage = .dynamic,
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
