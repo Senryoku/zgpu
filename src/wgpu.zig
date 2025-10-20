@@ -1273,62 +1273,62 @@ pub const CreateComputePipelineAsyncCallback = *const fn (
     pipeline: ComputePipeline,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const CreateRenderPipelineAsyncCallback = *const fn (
     status: CreatePipelineAsyncStatus,
     pipeline: RenderPipeline,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const ErrorCallback = *const fn (
     err_type: ErrorType,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const LoggingCallback = *const fn (
     log_type: LoggingType,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const DeviceLostCallback = *const fn (
     reason: DeviceLostReason,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const RequestAdapterCallback = *const fn (
     status: RequestAdapterStatus,
     adapter: Adapter,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const RequestDeviceCallback = *const fn (
     status: RequestDeviceStatus,
     device: Device,
     message: ?[*:0]const u8,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const BufferMapCallback = *const fn (
     status: BufferMapAsyncStatus,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const QueueWorkDoneCallback = *const fn (
     status: QueueWorkDoneStatus,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const CompilationInfoCallback = *const fn (
     status: CompilationInfoRequestStatus,
     info: *const CompilationInfo,
     userdata: ?*anyopaque,
-) callconv(.C) void;
+) callconv(.c) void;
 
 pub const Adapter = *opaque {
     pub fn createDevice(adapter: Adapter, descriptor: DeviceDescriptor) Device {
@@ -2238,7 +2238,7 @@ pub const Queue = *opaque {
                     queue: Queue,
                     callback: QueueWorkDoneCallback,
                     userdata: ?*anyopaque,
-                ) callconv(.C) void,
+                ) callconv(.c) void,
                 .{ .name = "wgpuQueueOnSubmittedWorkDone" },
             );
             oswd(queue, callback, userdata);
@@ -2249,7 +2249,7 @@ pub const Queue = *opaque {
                     signal_value: u64,
                     callback: QueueWorkDoneCallback,
                     userdata: ?*anyopaque,
-                ) callconv(.C) void,
+                ) callconv(.c) void,
                 .{ .name = "wgpuQueueOnSubmittedWorkDone" },
             );
             oswd(queue, signal_value, callback, userdata);
