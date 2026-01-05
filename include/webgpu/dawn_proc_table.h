@@ -7,40 +7,52 @@
 // Note: Often allocated as a static global. Do not add a complex constructor.
 typedef struct DawnProcTable {
     WGPUProcCreateInstance createInstance;
+    WGPUProcGetInstanceFeatures getInstanceFeatures;
+    WGPUProcGetInstanceLimits getInstanceLimits;
+    WGPUProcHasInstanceFeature hasInstanceFeature;
     WGPUProcGetProcAddress getProcAddress;
 
     WGPUProcAdapterCreateDevice adapterCreateDevice;
-    WGPUProcAdapterEnumerateFeatures adapterEnumerateFeatures;
+    WGPUProcAdapterGetFeatures adapterGetFeatures;
+    WGPUProcAdapterGetFormatCapabilities adapterGetFormatCapabilities;
+    WGPUProcAdapterGetInfo adapterGetInfo;
     WGPUProcAdapterGetInstance adapterGetInstance;
     WGPUProcAdapterGetLimits adapterGetLimits;
-    WGPUProcAdapterGetProperties adapterGetProperties;
     WGPUProcAdapterHasFeature adapterHasFeature;
     WGPUProcAdapterRequestDevice adapterRequestDevice;
-    WGPUProcAdapterReference adapterReference;
+    WGPUProcAdapterAddRef adapterAddRef;
     WGPUProcAdapterRelease adapterRelease;
 
+    WGPUProcAdapterInfoFreeMembers adapterInfoFreeMembers;
+
+    WGPUProcAdapterPropertiesMemoryHeapsFreeMembers adapterPropertiesMemoryHeapsFreeMembers;
+
+    WGPUProcAdapterPropertiesSubgroupMatrixConfigsFreeMembers adapterPropertiesSubgroupMatrixConfigsFreeMembers;
+
     WGPUProcBindGroupSetLabel bindGroupSetLabel;
-    WGPUProcBindGroupReference bindGroupReference;
+    WGPUProcBindGroupAddRef bindGroupAddRef;
     WGPUProcBindGroupRelease bindGroupRelease;
 
     WGPUProcBindGroupLayoutSetLabel bindGroupLayoutSetLabel;
-    WGPUProcBindGroupLayoutReference bindGroupLayoutReference;
+    WGPUProcBindGroupLayoutAddRef bindGroupLayoutAddRef;
     WGPUProcBindGroupLayoutRelease bindGroupLayoutRelease;
 
     WGPUProcBufferDestroy bufferDestroy;
     WGPUProcBufferGetConstMappedRange bufferGetConstMappedRange;
-    WGPUProcBufferGetMapState bufferGetMapState;
     WGPUProcBufferGetMappedRange bufferGetMappedRange;
+    WGPUProcBufferGetMapState bufferGetMapState;
     WGPUProcBufferGetSize bufferGetSize;
     WGPUProcBufferGetUsage bufferGetUsage;
     WGPUProcBufferMapAsync bufferMapAsync;
+    WGPUProcBufferReadMappedRange bufferReadMappedRange;
     WGPUProcBufferSetLabel bufferSetLabel;
     WGPUProcBufferUnmap bufferUnmap;
-    WGPUProcBufferReference bufferReference;
+    WGPUProcBufferWriteMappedRange bufferWriteMappedRange;
+    WGPUProcBufferAddRef bufferAddRef;
     WGPUProcBufferRelease bufferRelease;
 
     WGPUProcCommandBufferSetLabel commandBufferSetLabel;
-    WGPUProcCommandBufferReference commandBufferReference;
+    WGPUProcCommandBufferAddRef commandBufferAddRef;
     WGPUProcCommandBufferRelease commandBufferRelease;
 
     WGPUProcCommandEncoderBeginComputePass commandEncoderBeginComputePass;
@@ -50,7 +62,6 @@ typedef struct DawnProcTable {
     WGPUProcCommandEncoderCopyBufferToTexture commandEncoderCopyBufferToTexture;
     WGPUProcCommandEncoderCopyTextureToBuffer commandEncoderCopyTextureToBuffer;
     WGPUProcCommandEncoderCopyTextureToTexture commandEncoderCopyTextureToTexture;
-    WGPUProcCommandEncoderCopyTextureToTextureInternal commandEncoderCopyTextureToTextureInternal;
     WGPUProcCommandEncoderFinish commandEncoderFinish;
     WGPUProcCommandEncoderInjectValidationError commandEncoderInjectValidationError;
     WGPUProcCommandEncoderInsertDebugMarker commandEncoderInsertDebugMarker;
@@ -60,7 +71,7 @@ typedef struct DawnProcTable {
     WGPUProcCommandEncoderSetLabel commandEncoderSetLabel;
     WGPUProcCommandEncoderWriteBuffer commandEncoderWriteBuffer;
     WGPUProcCommandEncoderWriteTimestamp commandEncoderWriteTimestamp;
-    WGPUProcCommandEncoderReference commandEncoderReference;
+    WGPUProcCommandEncoderAddRef commandEncoderAddRef;
     WGPUProcCommandEncoderRelease commandEncoderRelease;
 
     WGPUProcComputePassEncoderDispatchWorkgroups computePassEncoderDispatchWorkgroups;
@@ -70,16 +81,19 @@ typedef struct DawnProcTable {
     WGPUProcComputePassEncoderPopDebugGroup computePassEncoderPopDebugGroup;
     WGPUProcComputePassEncoderPushDebugGroup computePassEncoderPushDebugGroup;
     WGPUProcComputePassEncoderSetBindGroup computePassEncoderSetBindGroup;
+    WGPUProcComputePassEncoderSetImmediateData computePassEncoderSetImmediateData;
     WGPUProcComputePassEncoderSetLabel computePassEncoderSetLabel;
     WGPUProcComputePassEncoderSetPipeline computePassEncoderSetPipeline;
     WGPUProcComputePassEncoderWriteTimestamp computePassEncoderWriteTimestamp;
-    WGPUProcComputePassEncoderReference computePassEncoderReference;
+    WGPUProcComputePassEncoderAddRef computePassEncoderAddRef;
     WGPUProcComputePassEncoderRelease computePassEncoderRelease;
 
     WGPUProcComputePipelineGetBindGroupLayout computePipelineGetBindGroupLayout;
     WGPUProcComputePipelineSetLabel computePipelineSetLabel;
-    WGPUProcComputePipelineReference computePipelineReference;
+    WGPUProcComputePipelineAddRef computePipelineAddRef;
     WGPUProcComputePipelineRelease computePipelineRelease;
+
+    WGPUProcDawnDrmFormatCapabilitiesFreeMembers dawnDrmFormatCapabilitiesFreeMembers;
 
     WGPUProcDeviceCreateBindGroup deviceCreateBindGroup;
     WGPUProcDeviceCreateBindGroupLayout deviceCreateBindGroupLayout;
@@ -99,50 +113,55 @@ typedef struct DawnProcTable {
     WGPUProcDeviceCreateRenderPipelineAsync deviceCreateRenderPipelineAsync;
     WGPUProcDeviceCreateSampler deviceCreateSampler;
     WGPUProcDeviceCreateShaderModule deviceCreateShaderModule;
-    WGPUProcDeviceCreateSwapChain deviceCreateSwapChain;
     WGPUProcDeviceCreateTexture deviceCreateTexture;
     WGPUProcDeviceDestroy deviceDestroy;
-    WGPUProcDeviceEnumerateFeatures deviceEnumerateFeatures;
     WGPUProcDeviceForceLoss deviceForceLoss;
     WGPUProcDeviceGetAdapter deviceGetAdapter;
+    WGPUProcDeviceGetAdapterInfo deviceGetAdapterInfo;
+    WGPUProcDeviceGetAHardwareBufferProperties deviceGetAHardwareBufferProperties;
+    WGPUProcDeviceGetFeatures deviceGetFeatures;
     WGPUProcDeviceGetLimits deviceGetLimits;
+    WGPUProcDeviceGetLostFuture deviceGetLostFuture;
     WGPUProcDeviceGetQueue deviceGetQueue;
-    WGPUProcDeviceGetSupportedSurfaceUsage deviceGetSupportedSurfaceUsage;
     WGPUProcDeviceHasFeature deviceHasFeature;
+    WGPUProcDeviceImportSharedBufferMemory deviceImportSharedBufferMemory;
+    WGPUProcDeviceImportSharedFence deviceImportSharedFence;
+    WGPUProcDeviceImportSharedTextureMemory deviceImportSharedTextureMemory;
     WGPUProcDeviceInjectError deviceInjectError;
     WGPUProcDevicePopErrorScope devicePopErrorScope;
     WGPUProcDevicePushErrorScope devicePushErrorScope;
-    WGPUProcDeviceSetDeviceLostCallback deviceSetDeviceLostCallback;
     WGPUProcDeviceSetLabel deviceSetLabel;
     WGPUProcDeviceSetLoggingCallback deviceSetLoggingCallback;
-    WGPUProcDeviceSetUncapturedErrorCallback deviceSetUncapturedErrorCallback;
     WGPUProcDeviceTick deviceTick;
     WGPUProcDeviceValidateTextureDescriptor deviceValidateTextureDescriptor;
-    WGPUProcDeviceReference deviceReference;
+    WGPUProcDeviceAddRef deviceAddRef;
     WGPUProcDeviceRelease deviceRelease;
 
     WGPUProcExternalTextureDestroy externalTextureDestroy;
     WGPUProcExternalTextureExpire externalTextureExpire;
     WGPUProcExternalTextureRefresh externalTextureRefresh;
     WGPUProcExternalTextureSetLabel externalTextureSetLabel;
-    WGPUProcExternalTextureReference externalTextureReference;
+    WGPUProcExternalTextureAddRef externalTextureAddRef;
     WGPUProcExternalTextureRelease externalTextureRelease;
 
     WGPUProcInstanceCreateSurface instanceCreateSurface;
+    WGPUProcInstanceGetWGSLLanguageFeatures instanceGetWGSLLanguageFeatures;
+    WGPUProcInstanceHasWGSLLanguageFeature instanceHasWGSLLanguageFeature;
     WGPUProcInstanceProcessEvents instanceProcessEvents;
     WGPUProcInstanceRequestAdapter instanceRequestAdapter;
-    WGPUProcInstanceReference instanceReference;
+    WGPUProcInstanceWaitAny instanceWaitAny;
+    WGPUProcInstanceAddRef instanceAddRef;
     WGPUProcInstanceRelease instanceRelease;
 
     WGPUProcPipelineLayoutSetLabel pipelineLayoutSetLabel;
-    WGPUProcPipelineLayoutReference pipelineLayoutReference;
+    WGPUProcPipelineLayoutAddRef pipelineLayoutAddRef;
     WGPUProcPipelineLayoutRelease pipelineLayoutRelease;
 
     WGPUProcQuerySetDestroy querySetDestroy;
     WGPUProcQuerySetGetCount querySetGetCount;
     WGPUProcQuerySetGetType querySetGetType;
     WGPUProcQuerySetSetLabel querySetSetLabel;
-    WGPUProcQuerySetReference querySetReference;
+    WGPUProcQuerySetAddRef querySetAddRef;
     WGPUProcQuerySetRelease querySetRelease;
 
     WGPUProcQueueCopyExternalTextureForBrowser queueCopyExternalTextureForBrowser;
@@ -152,11 +171,11 @@ typedef struct DawnProcTable {
     WGPUProcQueueSubmit queueSubmit;
     WGPUProcQueueWriteBuffer queueWriteBuffer;
     WGPUProcQueueWriteTexture queueWriteTexture;
-    WGPUProcQueueReference queueReference;
+    WGPUProcQueueAddRef queueAddRef;
     WGPUProcQueueRelease queueRelease;
 
     WGPUProcRenderBundleSetLabel renderBundleSetLabel;
-    WGPUProcRenderBundleReference renderBundleReference;
+    WGPUProcRenderBundleAddRef renderBundleAddRef;
     WGPUProcRenderBundleRelease renderBundleRelease;
 
     WGPUProcRenderBundleEncoderDraw renderBundleEncoderDraw;
@@ -168,11 +187,12 @@ typedef struct DawnProcTable {
     WGPUProcRenderBundleEncoderPopDebugGroup renderBundleEncoderPopDebugGroup;
     WGPUProcRenderBundleEncoderPushDebugGroup renderBundleEncoderPushDebugGroup;
     WGPUProcRenderBundleEncoderSetBindGroup renderBundleEncoderSetBindGroup;
+    WGPUProcRenderBundleEncoderSetImmediateData renderBundleEncoderSetImmediateData;
     WGPUProcRenderBundleEncoderSetIndexBuffer renderBundleEncoderSetIndexBuffer;
     WGPUProcRenderBundleEncoderSetLabel renderBundleEncoderSetLabel;
     WGPUProcRenderBundleEncoderSetPipeline renderBundleEncoderSetPipeline;
     WGPUProcRenderBundleEncoderSetVertexBuffer renderBundleEncoderSetVertexBuffer;
-    WGPUProcRenderBundleEncoderReference renderBundleEncoderReference;
+    WGPUProcRenderBundleEncoderAddRef renderBundleEncoderAddRef;
     WGPUProcRenderBundleEncoderRelease renderBundleEncoderRelease;
 
     WGPUProcRenderPassEncoderBeginOcclusionQuery renderPassEncoderBeginOcclusionQuery;
@@ -184,10 +204,14 @@ typedef struct DawnProcTable {
     WGPUProcRenderPassEncoderEndOcclusionQuery renderPassEncoderEndOcclusionQuery;
     WGPUProcRenderPassEncoderExecuteBundles renderPassEncoderExecuteBundles;
     WGPUProcRenderPassEncoderInsertDebugMarker renderPassEncoderInsertDebugMarker;
+    WGPUProcRenderPassEncoderMultiDrawIndexedIndirect renderPassEncoderMultiDrawIndexedIndirect;
+    WGPUProcRenderPassEncoderMultiDrawIndirect renderPassEncoderMultiDrawIndirect;
+    WGPUProcRenderPassEncoderPixelLocalStorageBarrier renderPassEncoderPixelLocalStorageBarrier;
     WGPUProcRenderPassEncoderPopDebugGroup renderPassEncoderPopDebugGroup;
     WGPUProcRenderPassEncoderPushDebugGroup renderPassEncoderPushDebugGroup;
     WGPUProcRenderPassEncoderSetBindGroup renderPassEncoderSetBindGroup;
     WGPUProcRenderPassEncoderSetBlendConstant renderPassEncoderSetBlendConstant;
+    WGPUProcRenderPassEncoderSetImmediateData renderPassEncoderSetImmediateData;
     WGPUProcRenderPassEncoderSetIndexBuffer renderPassEncoderSetIndexBuffer;
     WGPUProcRenderPassEncoderSetLabel renderPassEncoderSetLabel;
     WGPUProcRenderPassEncoderSetPipeline renderPassEncoderSetPipeline;
@@ -196,32 +220,67 @@ typedef struct DawnProcTable {
     WGPUProcRenderPassEncoderSetVertexBuffer renderPassEncoderSetVertexBuffer;
     WGPUProcRenderPassEncoderSetViewport renderPassEncoderSetViewport;
     WGPUProcRenderPassEncoderWriteTimestamp renderPassEncoderWriteTimestamp;
-    WGPUProcRenderPassEncoderReference renderPassEncoderReference;
+    WGPUProcRenderPassEncoderAddRef renderPassEncoderAddRef;
     WGPUProcRenderPassEncoderRelease renderPassEncoderRelease;
 
     WGPUProcRenderPipelineGetBindGroupLayout renderPipelineGetBindGroupLayout;
     WGPUProcRenderPipelineSetLabel renderPipelineSetLabel;
-    WGPUProcRenderPipelineReference renderPipelineReference;
+    WGPUProcRenderPipelineAddRef renderPipelineAddRef;
     WGPUProcRenderPipelineRelease renderPipelineRelease;
 
     WGPUProcSamplerSetLabel samplerSetLabel;
-    WGPUProcSamplerReference samplerReference;
+    WGPUProcSamplerAddRef samplerAddRef;
     WGPUProcSamplerRelease samplerRelease;
 
     WGPUProcShaderModuleGetCompilationInfo shaderModuleGetCompilationInfo;
     WGPUProcShaderModuleSetLabel shaderModuleSetLabel;
-    WGPUProcShaderModuleReference shaderModuleReference;
+    WGPUProcShaderModuleAddRef shaderModuleAddRef;
     WGPUProcShaderModuleRelease shaderModuleRelease;
 
-    WGPUProcSurfaceReference surfaceReference;
+    WGPUProcSharedBufferMemoryBeginAccess sharedBufferMemoryBeginAccess;
+    WGPUProcSharedBufferMemoryCreateBuffer sharedBufferMemoryCreateBuffer;
+    WGPUProcSharedBufferMemoryEndAccess sharedBufferMemoryEndAccess;
+    WGPUProcSharedBufferMemoryGetProperties sharedBufferMemoryGetProperties;
+    WGPUProcSharedBufferMemoryIsDeviceLost sharedBufferMemoryIsDeviceLost;
+    WGPUProcSharedBufferMemorySetLabel sharedBufferMemorySetLabel;
+    WGPUProcSharedBufferMemoryAddRef sharedBufferMemoryAddRef;
+    WGPUProcSharedBufferMemoryRelease sharedBufferMemoryRelease;
+
+    WGPUProcSharedBufferMemoryEndAccessStateFreeMembers sharedBufferMemoryEndAccessStateFreeMembers;
+
+    WGPUProcSharedFenceExportInfo sharedFenceExportInfo;
+    WGPUProcSharedFenceAddRef sharedFenceAddRef;
+    WGPUProcSharedFenceRelease sharedFenceRelease;
+
+    WGPUProcSharedTextureMemoryBeginAccess sharedTextureMemoryBeginAccess;
+    WGPUProcSharedTextureMemoryCreateTexture sharedTextureMemoryCreateTexture;
+    WGPUProcSharedTextureMemoryEndAccess sharedTextureMemoryEndAccess;
+    WGPUProcSharedTextureMemoryGetProperties sharedTextureMemoryGetProperties;
+    WGPUProcSharedTextureMemoryIsDeviceLost sharedTextureMemoryIsDeviceLost;
+    WGPUProcSharedTextureMemorySetLabel sharedTextureMemorySetLabel;
+    WGPUProcSharedTextureMemoryAddRef sharedTextureMemoryAddRef;
+    WGPUProcSharedTextureMemoryRelease sharedTextureMemoryRelease;
+
+    WGPUProcSharedTextureMemoryEndAccessStateFreeMembers sharedTextureMemoryEndAccessStateFreeMembers;
+
+    WGPUProcSupportedFeaturesFreeMembers supportedFeaturesFreeMembers;
+
+    WGPUProcSupportedInstanceFeaturesFreeMembers supportedInstanceFeaturesFreeMembers;
+
+    WGPUProcSupportedWGSLLanguageFeaturesFreeMembers supportedWGSLLanguageFeaturesFreeMembers;
+
+    WGPUProcSurfaceConfigure surfaceConfigure;
+    WGPUProcSurfaceGetCapabilities surfaceGetCapabilities;
+    WGPUProcSurfaceGetCurrentTexture surfaceGetCurrentTexture;
+    WGPUProcSurfacePresent surfacePresent;
+    WGPUProcSurfaceSetLabel surfaceSetLabel;
+    WGPUProcSurfaceUnconfigure surfaceUnconfigure;
+    WGPUProcSurfaceAddRef surfaceAddRef;
     WGPUProcSurfaceRelease surfaceRelease;
 
-    WGPUProcSwapChainGetCurrentTexture swapChainGetCurrentTexture;
-    WGPUProcSwapChainGetCurrentTextureView swapChainGetCurrentTextureView;
-    WGPUProcSwapChainPresent swapChainPresent;
-    WGPUProcSwapChainReference swapChainReference;
-    WGPUProcSwapChainRelease swapChainRelease;
+    WGPUProcSurfaceCapabilitiesFreeMembers surfaceCapabilitiesFreeMembers;
 
+    WGPUProcTextureCreateErrorView textureCreateErrorView;
     WGPUProcTextureCreateView textureCreateView;
     WGPUProcTextureDestroy textureDestroy;
     WGPUProcTextureGetDepthOrArrayLayers textureGetDepthOrArrayLayers;
@@ -233,12 +292,13 @@ typedef struct DawnProcTable {
     WGPUProcTextureGetUsage textureGetUsage;
     WGPUProcTextureGetWidth textureGetWidth;
     WGPUProcTextureSetLabel textureSetLabel;
-    WGPUProcTextureReference textureReference;
+    WGPUProcTextureAddRef textureAddRef;
     WGPUProcTextureRelease textureRelease;
 
     WGPUProcTextureViewSetLabel textureViewSetLabel;
-    WGPUProcTextureViewReference textureViewReference;
+    WGPUProcTextureViewAddRef textureViewAddRef;
     WGPUProcTextureViewRelease textureViewRelease;
+
 
 } DawnProcTable;
 

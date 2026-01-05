@@ -102,8 +102,10 @@ pub fn build(b: *std.Build) void {
 
     const options_module = options_step.createModule();
 
-    _ = b.addModule("root", .{
+    const root = b.addModule("root", .{
         .root_source_file = b.path("src/zgpu.zig"),
+        .target = target,
+        .optimize = optimize,
         .imports = &.{
             .{ .name = "zgpu_options", .module = options_module },
             .{ .name = "zpool", .module = b.dependency("zpool", .{}).module("root") },
@@ -113,35 +115,22 @@ pub fn build(b: *std.Build) void {
     const zdawn = b.addLibrary(.{
         .name = "zdawn",
         .use_llvm = true,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-        }),
+        .root_module = root,
     });
     b.installArtifact(zdawn);
-
     linkSystemDeps(b, zdawn);
     addLibraryPathsTo(zdawn);
 
-    zdawn.linkSystemLibrary("dawn");
+    // prebuilt libs from os-specific dependency
+    zdawn.linkSystemLibrary("webgpu_dawn");
+    if (zdawn.rootModuleTarget().os.tag == .windows) zdawn.linkSystemLibrary("mingw_helpers");
+
     zdawn.linkLibC();
-    if (target.result.abi != .msvc)
-        zdawn.linkLibCpp();
-
-    zdawn.addIncludePath(b.path("libs/dawn/include"));
+    zdawn.linkLibCpp();
     zdawn.addIncludePath(b.path("src"));
-
-    zdawn.addCSourceFile(.{
-        .file = b.path("src/dawn.cpp"),
-        .flags = &.{ "-std=c++17", "-fno-sanitize=undefined" },
-    });
-    zdawn.addCSourceFile(.{
-        .file = b.path("src/dawn_proc.c"),
-        .flags = &.{"-fno-sanitize=undefined"},
-    });
+    zdawn.addIncludePath(b.path("include"));
 
     const test_step = b.step("test", "Run zgpu tests");
-
     const tests = b.addTest(.{
         .name = "zgpu-tests",
         .use_llvm = true,
@@ -151,13 +140,37 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    tests.addIncludePath(b.path("libs/dawn/include"));
     tests.linkLibrary(zdawn);
+    tests.addIncludePath(b.path("include"));
     linkSystemDeps(b, tests);
     addLibraryPathsTo(tests);
     b.installArtifact(tests);
-
     test_step.dependOn(&b.addRunArtifact(tests).step);
+}
+
+/// Call this for your exe to copy dxcompiler.dll and dxil.dll to your exe's directory from zwindows
+pub fn installDxcFrom(exe: *std.Build.Step.Compile, zwindows_dep_name: []const u8) void {
+    const b = exe.step.owner;
+    exe.step.dependOn(
+        &b.addInstallFileWithDir(
+            .{ .dependency = .{
+                .dependency = b.dependency(zwindows_dep_name, .{}),
+                .sub_path = "bin/x64/dxcompiler.dll",
+            } },
+            .bin,
+            "dxcompiler.dll",
+        ).step,
+    );
+    exe.step.dependOn(
+        &b.addInstallFileWithDir(
+            .{ .dependency = .{
+                .dependency = b.dependency(zwindows_dep_name, .{}),
+                .sub_path = "bin/x64/dxil.dll",
+            } },
+            .bin,
+            "dxil.dll",
+        ).step,
+    );
 }
 
 pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void {
@@ -167,7 +180,9 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
                 compile_step.addLibraryPath(system_sdk.path("windows/lib/x86_64-windows-gnu"));
             }
             compile_step.linkSystemLibrary("ole32");
+            compile_step.linkSystemLibrary("oleaut32");
             compile_step.linkSystemLibrary("dxguid");
+            compile_step.linkSystemLibrary("dbghelp");
         },
         .macos => {
             if (b.lazyDependency("system_sdk", .{})) |system_sdk| {
@@ -191,13 +206,13 @@ pub fn addLibraryPathsTo(compile_step: *std.Build.Step.Compile) void {
     const target = compile_step.rootModuleTarget();
     switch (target.os.tag) {
         .windows => {
-            if (b.lazyDependency("dawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
+            if (b.lazyDependency("zdawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
             }
         },
         .linux => {
             if (target.cpu.arch.isX86()) {
-                if (b.lazyDependency("dawn_x86_64_linux_gnu", .{})) |dawn_prebuilt| {
+                if (b.lazyDependency("zdawn_x86_64_linux_gnu", .{})) |dawn_prebuilt| {
                     compile_step.addLibraryPath(dawn_prebuilt.path(""));
                 }
             } else if (target.cpu.arch.isAARCH64()) {
