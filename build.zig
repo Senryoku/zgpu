@@ -123,7 +123,7 @@ pub fn build(b: *std.Build) void {
 
     // prebuilt libs from os-specific dependency
     zdawn.linkSystemLibrary("webgpu_dawn");
-    if (zdawn.rootModuleTarget().os.tag == .windows) zdawn.linkSystemLibrary("mingw_helpers");
+    // if (zdawn.rootModuleTarget().os.tag == .windows) zdawn.linkSystemLibrary("mingw_helpers");
 
     zdawn.linkLibC();
     zdawn.linkLibCpp();
@@ -203,37 +203,39 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
 
 pub fn addLibraryPathsTo(compile_step: *std.Build.Step.Compile) void {
     const b = compile_step.step.owner;
-    const target = compile_step.rootModuleTarget();
-    switch (target.os.tag) {
-        .windows => {
-            if (b.lazyDependency("zdawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
-                compile_step.addLibraryPath(dawn_prebuilt.path(""));
-            }
-        },
-        .linux => {
-            if (target.cpu.arch.isX86()) {
-                if (b.lazyDependency("zdawn_x86_64_linux_gnu", .{})) |dawn_prebuilt| {
-                    compile_step.addLibraryPath(dawn_prebuilt.path(""));
-                }
-            } else if (target.cpu.arch.isAARCH64()) {
-                if (b.lazyDependency("dawn_aarch64_linux_gnu", .{})) |dawn_prebuilt| {
-                    compile_step.addLibraryPath(dawn_prebuilt.path(""));
-                }
-            }
-        },
-        .macos => {
-            if (target.cpu.arch.isX86()) {
-                if (b.lazyDependency("dawn_x86_64_macos", .{})) |dawn_prebuilt| {
-                    compile_step.addLibraryPath(dawn_prebuilt.path(""));
-                }
-            } else if (target.cpu.arch.isAARCH64()) {
-                if (b.lazyDependency("dawn_aarch64_macos", .{})) |dawn_prebuilt| {
-                    compile_step.addLibraryPath(dawn_prebuilt.path(""));
-                }
-            }
-        },
-        else => {},
-    }
+    // const target = compile_step.rootModuleTarget();
+    // switch (target.os.tag) {
+    //     .windows => {
+    //         if (b.lazyDependency("zdawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
+    //             compile_step.addLibraryPath(dawn_prebuilt.path(""));
+    //         }
+    //     },
+    //     .linux => {
+    //         if (target.cpu.arch.isX86()) {
+    //             if (b.lazyDependency("zdawn_x86_64_linux_gnu", .{})) |dawn_prebuilt| {
+    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
+    //             }
+    //         } else if (target.cpu.arch.isAARCH64()) {
+    //             if (b.lazyDependency("dawn_aarch64_linux_gnu", .{})) |dawn_prebuilt| {
+    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
+    //             }
+    //         }
+    //     },
+    //     .macos => {
+    //         if (target.cpu.arch.isX86()) {
+    //             if (b.lazyDependency("dawn_x86_64_macos", .{})) |dawn_prebuilt| {
+    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
+    //             }
+    //         } else if (target.cpu.arch.isAARCH64()) {
+    //             if (b.lazyDependency("dawn_aarch64_macos", .{})) |dawn_prebuilt| {
+    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
+    //             }
+    //         }
+    //     },
+    //     else => {},
+    // }
+    const dawn = b.dependency("webgpu_dawn", .{});
+    compile_step.addLibraryPath(dawn.path("./build/libs/dawn/src/dawn/native"));
 }
 
 pub fn checkTargetSupported(target: std.Target) bool {

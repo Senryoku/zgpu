@@ -1503,7 +1503,7 @@ pub const Device = *opaque {
     }
 
     pub fn getLimits(device: Device, limits: *Limits) bool {
-        return c.wgpuDeviceGetLimits(@ptrCast(device), limits);
+        return c.wgpuDeviceGetLimits(@ptrCast(device), @ptrCast(limits)) == @intFromEnum(True);
     }
 
     pub fn getQueue(device: Device) Queue {
@@ -1696,7 +1696,7 @@ pub const CommandEncoder = *opaque {
         destination: TexelCopyBufferInfo,
         copy_size: Extent3D,
     ) void {
-        c.wgpuCommandEncoderCopyTextureToBuffer(@ptrCast(command_encoder), &source, &destination, &copy_size);
+        c.wgpuCommandEncoderCopyTextureToBuffer(@ptrCast(command_encoder), @ptrCast(&source), @ptrCast(&destination), @ptrCast(&copy_size));
     }
 
     pub fn copyTextureToTexture(
@@ -2016,7 +2016,7 @@ pub const RenderBundleEncoder = *opaque {
         first_instance: u32,
     ) void {
         c.wgpuRenderBundleEncoderDraw(
-            render_bundle_encoder,
+            @ptrCast(render_bundle_encoder),
             vertex_count,
             instance_count,
             first_vertex,
@@ -2033,7 +2033,7 @@ pub const RenderBundleEncoder = *opaque {
         first_instance: u32,
     ) void {
         c.wgpuRenderBundleEncoderDrawIndexed(
-            render_bundle_encoder,
+            @ptrCast(render_bundle_encoder),
             index_count,
             instance_count,
             first_index,
@@ -2047,7 +2047,7 @@ pub const RenderBundleEncoder = *opaque {
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        c.wgpuRenderBundleEncoderDrawIndexedIndirect(render_bundle_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderBundleEncoderDrawIndexedIndirect(@ptrCast(render_bundle_encoder), indirect_buffer, indirect_offset);
     }
 
     pub fn drawIndirect(
@@ -2055,29 +2055,29 @@ pub const RenderBundleEncoder = *opaque {
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        c.wgpuRenderBundleEncoderDrawIndirect(render_bundle_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderBundleEncoderDrawIndirect(@ptrCast(render_bundle_encoder), indirect_buffer, indirect_offset);
     }
 
     pub fn finish(
         render_bundle_encoder: RenderBundleEncoder,
         descriptor: RenderBundleDescriptor,
     ) RenderBundle {
-        return c.wgpuRenderBundleEncoderFinish(render_bundle_encoder, &descriptor);
+        return c.wgpuRenderBundleEncoderFinish(@ptrCast(render_bundle_encoder), &descriptor);
     }
 
     pub fn insertDebugMarker(
         render_bundle_encoder: RenderBundleEncoder,
         marker_label: []const u8,
     ) void {
-        c.wgpuRenderBundleEncoderInsertDebugMarker(render_bundle_encoder, StringView.cFromZig(marker_label));
+        c.wgpuRenderBundleEncoderInsertDebugMarker(@ptrCast(render_bundle_encoder), StringView.cFromZig(marker_label));
     }
 
     pub fn popDebugGroup(render_bundle_encoder: RenderBundleEncoder) void {
-        c.wgpuRenderBundleEncoderPopDebugGroup(render_bundle_encoder);
+        c.wgpuRenderBundleEncoderPopDebugGroup(@ptrCast(render_bundle_encoder));
     }
 
     pub fn pushDebugGroup(render_bundle_encoder: RenderBundleEncoder, group_label: []const u8) void {
-        c.wgpuRenderBundleEncoderPushDebugGroup(render_bundle_encoder, StringView.cFromZig(group_label));
+        c.wgpuRenderBundleEncoderPushDebugGroup(@ptrCast(render_bundle_encoder), StringView.cFromZig(group_label));
     }
 
     pub fn setBindGroup(
@@ -2124,17 +2124,17 @@ pub const RenderBundleEncoder = *opaque {
     }
 
     pub fn addRef(render_bundle_encoder: RenderBundleEncoder) void {
-        c.wgpuRenderBundleEncoderAddRef(render_bundle_encoder);
+        c.wgpuRenderBundleEncoderAddRef(@ptrCast(render_bundle_encoder));
     }
 
     pub fn release(render_bundle_encoder: RenderBundleEncoder) void {
-        c.wgpuRenderBundleEncoderRelease(render_bundle_encoder);
+        c.wgpuRenderBundleEncoderRelease(@ptrCast(render_bundle_encoder));
     }
 };
 
 pub const RenderPassEncoder = *opaque {
     pub fn beginOcclusionQuery(render_pass_encoder: RenderPassEncoder, query_index: u32) void {
-        c.wgpuRenderPassEncoderBeginOcclusionQuery(render_pass_encoder, query_index);
+        c.wgpuRenderPassEncoderBeginOcclusionQuery(@ptrCast(render_pass_encoder), query_index);
     }
 
     pub fn draw(
@@ -2176,7 +2176,7 @@ pub const RenderPassEncoder = *opaque {
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        c.wgpuRenderPassEncoderDrawIndexedIndirect(render_pass_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderPassEncoderDrawIndexedIndirect(@ptrCast(render_pass_encoder), indirect_buffer, indirect_offset);
     }
 
     pub fn drawIndirect(
@@ -2184,7 +2184,7 @@ pub const RenderPassEncoder = *opaque {
         indirect_buffer: Buffer,
         indirect_offset: u64,
     ) void {
-        c.wgpuRenderPassEncoderDrawIndirect(render_pass_encoder, indirect_buffer, indirect_offset);
+        c.wgpuRenderPassEncoderDrawIndirect(@ptrCast(render_pass_encoder), indirect_buffer, indirect_offset);
     }
 
     pub fn end(render_pass_encoder: RenderPassEncoder) void {
@@ -2192,7 +2192,7 @@ pub const RenderPassEncoder = *opaque {
     }
 
     pub fn endOcclusionQuery(render_pass_encoder: RenderPassEncoder) void {
-        c.wgpuRenderPassEncoderEndOcclusionQuery(render_pass_encoder);
+        c.wgpuRenderPassEncoderEndOcclusionQuery(@ptrCast(render_pass_encoder));
     }
 
     pub fn executeBundles(
@@ -2204,15 +2204,15 @@ pub const RenderPassEncoder = *opaque {
     }
 
     pub fn insertDebugMarker(render_pass_encoder: RenderPassEncoder, marker_label: []const u8) void {
-        c.wgpuRenderPassEncoderInsertDebugMarker(render_pass_encoder, StringView.cFromZig(marker_label));
+        c.wgpuRenderPassEncoderInsertDebugMarker(@ptrCast(render_pass_encoder), StringView.cFromZig(marker_label));
     }
 
     pub fn popDebugGroup(render_pass_encoder: RenderPassEncoder) void {
-        c.wgpuRenderPassEncoderPopDebugGroup(render_pass_encoder);
+        c.wgpuRenderPassEncoderPopDebugGroup(@ptrCast(render_pass_encoder));
     }
 
     pub fn pushDebugGroup(render_pass_encoder: RenderPassEncoder, group_label: []const u8) void {
-        c.wgpuRenderPassEncoderPushDebugGroup(render_pass_encoder, StringView.cFromZig(group_label));
+        c.wgpuRenderPassEncoderPushDebugGroup(@ptrCast(render_pass_encoder), StringView.cFromZig(group_label));
     }
 
     pub fn setBindGroup(
@@ -2231,7 +2231,7 @@ pub const RenderPassEncoder = *opaque {
     }
 
     pub fn setBlendConstant(render_pass_encoder: RenderPassEncoder, color: Color) void {
-        c.wgpuRenderPassEncoderSetBlendConstant(render_pass_encoder, &color);
+        c.wgpuRenderPassEncoderSetBlendConstant(@ptrCast(render_pass_encoder), &color);
     }
 
     pub fn setIndexBuffer(
@@ -2259,11 +2259,11 @@ pub const RenderPassEncoder = *opaque {
         width: u32,
         height: u32,
     ) void {
-        c.wgpuRenderPassEncoderSetScissorRect(render_pass_encoder, x, y, width, height);
+        c.wgpuRenderPassEncoderSetScissorRect(@ptrCast(render_pass_encoder), x, y, width, height);
     }
 
     pub fn setStencilReference(render_pass_encoder: RenderPassEncoder, ref: u32) void {
-        c.wgpuRenderPassEncoderSetStencilReference(render_pass_encoder, ref);
+        c.wgpuRenderPassEncoderSetStencilReference(@ptrCast(render_pass_encoder), ref);
     }
 
     pub fn setVertexBuffer(
@@ -2285,7 +2285,7 @@ pub const RenderPassEncoder = *opaque {
         min_depth: f32,
         max_depth: f32,
     ) void {
-        c.wgpuRenderPassEncoderSetViewport(render_pass_encoder, x, y, width, height, min_depth, max_depth);
+        c.wgpuRenderPassEncoderSetViewport(@ptrCast(render_pass_encoder), x, y, width, height, min_depth, max_depth);
     }
 
     pub fn writeTimestamp(
@@ -2293,11 +2293,11 @@ pub const RenderPassEncoder = *opaque {
         query_set: QuerySet,
         query_index: u32,
     ) void {
-        c.wgpuRenderPassEncoderWriteTimestamp(render_pass_encoder, query_set, query_index);
+        c.wgpuRenderPassEncoderWriteTimestamp(@ptrCast(render_pass_encoder), query_set, query_index);
     }
 
     pub fn addRef(render_pass_encoder: RenderPassEncoder) void {
-        c.wgpuRenderPassEncoderAddRef(render_pass_encoder);
+        c.wgpuRenderPassEncoderAddRef(@ptrCast(render_pass_encoder));
     }
 
     pub fn release(render_pass_encoder: RenderPassEncoder) void {

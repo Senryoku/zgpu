@@ -593,7 +593,7 @@ pub const GraphicsContext = struct {
 
         gctx.instance.processEvents();
 
-        gctx.queue.submit(command_buffers.slice());
+        gctx.queue.submit(command_buffers.items);
 
         gctx.stats.tick(gctx.window_provider.getTime());
 
