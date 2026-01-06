@@ -200,8 +200,9 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
 }
 
 pub fn addLibraryPathsTo(b: *std.Build, compile_step: *std.Build.Step.Compile) !void {
-    const dawn = b.dependency("webgpu_dawn", .{});
-    compile_step.addLibraryPath(dawn.path("./build/src/dawn/native"));
+    if (b.lazyDependency("webgpu_dawn", .{})) |dawn| {
+        compile_step.addLibraryPath(dawn.path("./build/src/dawn/native"));
+    }
 }
 
 pub fn checkTargetSupported(target: std.Target) bool {
