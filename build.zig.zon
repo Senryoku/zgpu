@@ -21,7 +21,9 @@
             .hash = "system_sdk-0.3.0-dev-alwUNnYaaAJAtIdE2fg4NQfDqEKs7QCXy_qYukAOBfmF",
         },
         .webgpu_dawn = .{
-            .path = "../necromach-gpu-dawn",
+            .url = "git+https://github.com/Senryoku/necromach-gpu-dawn.git#main",
+            .hash = "necromach_gpu_dawn-0.2.0-QptSv8mEAABz0ogAYiCyPPhjwgPFJAyIczgRHNqHTM7g",
+            // .path = "../necromach-gpu-dawn",
         },
     },
 }
