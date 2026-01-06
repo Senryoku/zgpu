@@ -8,6 +8,7 @@
         "build.zig.zon",
         "include",
         "src",
+        "bin",
         "README.md",
         "LICENSE",
     },
