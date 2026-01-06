@@ -1,6 +1,8 @@
 const std = @import("std");
 const log = std.log.scoped(.zgpu);
 
+const webgpu_dawn = @import("webgpu_dawn");
+
 const default_options = struct {
     const uniforms_buffer_size = 4 * 1024 * 1024;
     const dawn_skip_validation = false;
@@ -119,12 +121,9 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(zdawn);
     linkSystemDeps(b, zdawn);
-    addLibraryPathsTo(zdawn);
+    try addLibraryPathsTo(b, zdawn);
 
-    // prebuilt libs from os-specific dependency
-    zdawn.linkSystemLibrary("webgpu_dawn");
-    // if (zdawn.rootModuleTarget().os.tag == .windows) zdawn.linkSystemLibrary("mingw_helpers");
-
+    // try webgpu_dawn.link(b, "webgpu_dawn", zdawn.root_module);
     zdawn.linkLibC();
     zdawn.linkLibCpp();
     zdawn.addIncludePath(b.path("src"));
@@ -140,21 +139,20 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    tests.linkLibrary(zdawn);
     tests.addIncludePath(b.path("include"));
     linkSystemDeps(b, tests);
-    addLibraryPathsTo(tests);
+    try addLibraryPathsTo(b, tests);
     b.installArtifact(tests);
     test_step.dependOn(&b.addRunArtifact(tests).step);
 }
 
-/// Call this for your exe to copy dxcompiler.dll and dxil.dll to your exe's directory from zwindows
-pub fn installDxcFrom(exe: *std.Build.Step.Compile, zwindows_dep_name: []const u8) void {
+/// Call this for your exe to copy dxcompiler.dll and dxil.dll to your exe's directory from a dependency (pass the zgpu dependency name to use the included dlls)
+pub fn installDxcFrom(exe: *std.Build.Step.Compile, dep_name: []const u8) void {
     const b = exe.step.owner;
     exe.step.dependOn(
         &b.addInstallFileWithDir(
             .{ .dependency = .{
-                .dependency = b.dependency(zwindows_dep_name, .{}),
+                .dependency = b.dependency(dep_name, .{}),
                 .sub_path = "bin/x64/dxcompiler.dll",
             } },
             .bin,
@@ -164,7 +162,7 @@ pub fn installDxcFrom(exe: *std.Build.Step.Compile, zwindows_dep_name: []const u
     exe.step.dependOn(
         &b.addInstallFileWithDir(
             .{ .dependency = .{
-                .dependency = b.dependency(zwindows_dep_name, .{}),
+                .dependency = b.dependency(dep_name, .{}),
                 .sub_path = "bin/x64/dxil.dll",
             } },
             .bin,
@@ -201,41 +199,9 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
     }
 }
 
-pub fn addLibraryPathsTo(compile_step: *std.Build.Step.Compile) void {
-    const b = compile_step.step.owner;
-    // const target = compile_step.rootModuleTarget();
-    // switch (target.os.tag) {
-    //     .windows => {
-    //         if (b.lazyDependency("zdawn_x86_64_windows_gnu", .{})) |dawn_prebuilt| {
-    //             compile_step.addLibraryPath(dawn_prebuilt.path(""));
-    //         }
-    //     },
-    //     .linux => {
-    //         if (target.cpu.arch.isX86()) {
-    //             if (b.lazyDependency("zdawn_x86_64_linux_gnu", .{})) |dawn_prebuilt| {
-    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
-    //             }
-    //         } else if (target.cpu.arch.isAARCH64()) {
-    //             if (b.lazyDependency("dawn_aarch64_linux_gnu", .{})) |dawn_prebuilt| {
-    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
-    //             }
-    //         }
-    //     },
-    //     .macos => {
-    //         if (target.cpu.arch.isX86()) {
-    //             if (b.lazyDependency("dawn_x86_64_macos", .{})) |dawn_prebuilt| {
-    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
-    //             }
-    //         } else if (target.cpu.arch.isAARCH64()) {
-    //             if (b.lazyDependency("dawn_aarch64_macos", .{})) |dawn_prebuilt| {
-    //                 compile_step.addLibraryPath(dawn_prebuilt.path(""));
-    //             }
-    //         }
-    //     },
-    //     else => {},
-    // }
+pub fn addLibraryPathsTo(b: *std.Build, compile_step: *std.Build.Step.Compile) !void {
     const dawn = b.dependency("webgpu_dawn", .{});
-    compile_step.addLibraryPath(dawn.path("./build/libs/dawn/src/dawn/native"));
+    compile_step.addLibraryPath(dawn.path("./build/src/dawn/native"));
 }
 
 pub fn checkTargetSupported(target: std.Target) bool {
