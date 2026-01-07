@@ -21,11 +21,30 @@
             .url = "git+https://github.com/zig-gamedev/system_sdk#c0dbf11cdc17da5904ea8a17eadc54dee26567ec",
             .hash = "system_sdk-0.3.0-dev-alwUNnYaaAJAtIdE2fg4NQfDqEKs7QCXy_qYukAOBfmF",
         },
-        .webgpu_dawn = .{
-            .url = "git+https://github.com/Senryoku/necromach-gpu-dawn.git#2f6655b9aa5eba49d7a632031540bb20647c98cf",
-            .hash = "necromach_gpu_dawn-0.2.0-QptSv7bBAAA23MNuzWMiEUHx5ByKl5K2fluhf5WPD49Q",
+        .zdawn_x86_64_windows_gnu = .{
+            .url = "https://github.com/Logickin-Lambda/libzdawn-binaries-windows/archive/bd5ad59ed413d49e77a1abda38a3cea75ac65d42.tar.gz",
+            .hash = "zdawn_x86_64_windows_gnu-0.14.0-dev-KBtZLeoBAACvXhaylDzCsmXChoCPeCCmcclj6B2X-Vhe",
             .lazy = true,
-            // .path = "../necromach-gpu-dawn",
+        },
+        .zdawn_x86_64_linux_gnu = .{
+            .url = "https://github.com/a-day-old-bagel/libzdawn-binaries/archive/83a7c48136bef8bf7f54586f6a2444a627509679.tar.gz",
+            .hash = "zdawn_x86_64_linux_gnu-0.14.0-dev-uKseL9PnvAL-jlweix9fqtXH2M1Knu9oA8Aznjv6XwnG",
+            .lazy = true,
+        },
+        .dawn_aarch64_linux_gnu = .{
+            .url = "https://github.com/michal-z/webgpu_dawn-aarch64-linux-gnu/archive/c1f55e740a62f6942ff046e709ecd509a005dbeb.tar.gz",
+            .hash = "N-V-__8AAJ-wTwNc0T9oSflO92iO6IxrdMeRil37UU-KQD_M",
+            .lazy = true,
+        },
+        .dawn_aarch64_macos = .{
+            .url = "https://github.com/michal-z/webgpu_dawn-aarch64-macos/archive/d2360cdfff0cf4a780cb77aa47c57aca03cc6dfe.tar.gz",
+            .hash = "N-V-__8AALVIRAIf5nfpx8-4mEo2RGsynVryPQPcHk95qFM5",
+            .lazy = true,
+        },
+        .dawn_x86_64_macos = .{
+            .url = "https://github.com/michal-z/webgpu_dawn-x86_64-macos/archive/901716b10b31ce3e0d3fe479326b41e91d59c661.tar.gz",
+            .hash = "N-V-__8AAIz1QAKx8C8vft2YoHjGTjEAkH2QMR2UiAo8xZJ-",
+            .lazy = true,
         },
     },
 }
