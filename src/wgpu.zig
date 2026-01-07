@@ -10,10 +10,13 @@ pub const False = OptionalBool.false;
 //
 
 pub const OptionalBool = enum(u32) {
-    false = 0x00000000,
-    true = 0x00000001,
-    undefined = 0x00000002,
+    false = c.WGPUOptionalBool_False,
+    true = c.WGPUOptionalBool_True,
+    undefined = c.WGPUOptionalBool_Undefined,
 };
+comptime {
+    std.debug.assert(@sizeOf(OptionalBool) == @sizeOf(c.WGPUBool));
+}
 
 pub const Status = enum(u32) {
     success = 0x00000001,
@@ -662,9 +665,15 @@ pub const ChainedStructOut = extern struct {
 
 pub const StringView = extern struct {
     pub const C = c.WGPUStringView;
-    data: ?[*]const u8,
-    length: usize,
+    data: ?[*]const u8 = null,
+    length: usize = 0,
 
+    pub fn init(str: []const u8) StringView {
+        return StringView{
+            .data = str.ptr,
+            .length = str.len,
+        };
+    }
     pub fn initC() c.WGPUStringView {
         return c.WGPUStringView{
             .data = null,
@@ -682,6 +691,11 @@ pub const StringView = extern struct {
         return str.data[0..str.length];
     }
 };
+comptime {
+    std.debug.assert(@sizeOf(StringView) == @sizeOf(c.WGPUStringView));
+    std.debug.assert(@offsetOf(StringView, "data") == @offsetOf(c.WGPUStringView, "data"));
+    std.debug.assert(@offsetOf(StringView, "length") == @offsetOf(c.WGPUStringView, "length"));
+}
 
 // Can be chained in InstanceDescriptor
 // Can be chained in RequestAdapterOptions
@@ -796,7 +810,7 @@ pub const BindGroupEntry = extern struct {
 
 pub const BindGroupDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     layout: BindGroupLayout,
     entry_count: usize,
     entries: ?[*]const BindGroupEntry,
@@ -841,22 +855,22 @@ pub const BindGroupLayoutEntry = extern struct {
 
 pub const BindGroupLayoutDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     entry_count: usize,
     entries: ?[*]const BindGroupLayoutEntry,
 };
 
 pub const BufferDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     usage: BufferUsage,
     size: u64,
-    mapped_at_creation: c.WGPUBool = c.WGPU_FALSE,
+    mapped_at_creation: OptionalBool = .false,
 };
 
 pub const CommandEncoderDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
 };
 
 pub const ConstantEntry = extern struct {
@@ -868,21 +882,21 @@ pub const ConstantEntry = extern struct {
 pub const ComputeState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: c.WGPUStringView,
+    entry_point: StringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
 };
 
 pub const ComputePipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     layout: ?PipelineLayout = null,
     compute: ComputeState,
 };
 
 pub const PipelineLayoutDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     bind_group_layout_count: usize,
     bind_group_layouts: ?[*]const BindGroupLayout,
     immediate_size: u32 = 0,
@@ -890,20 +904,20 @@ pub const PipelineLayoutDescriptor = extern struct {
 
 pub const QuerySetDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     query_type: QueryType,
     count: u32,
 };
 
 pub const RenderBundleEncoderDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     color_formats_count: usize,
     color_formats: ?[*]const TextureFormat,
     depth_stencil_format: TextureFormat,
     sample_count: u32,
-    depth_read_only: c.WGPUBool = c.WGPU_FALSE,
-    stencil_read_only: c.WGPUBool = c.WGPU_FALSE,
+    depth_read_only: OptionalBool = .false,
+    stencil_read_only: OptionalBool = .false,
 };
 
 pub const VertexAttribute = extern struct {
@@ -924,7 +938,7 @@ pub const VertexBufferLayout = extern struct {
 pub const VertexState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: c.WGPUStringView,
+    entry_point: StringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
     buffer_count: usize = 0,
@@ -952,7 +966,7 @@ pub const ColorTargetState = extern struct {
 pub const FragmentState = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     module: ShaderModule,
-    entry_point: c.WGPUStringView,
+    entry_point: StringView,
     constant_count: usize = 0,
     constants: ?[*]const ConstantEntry = null,
     target_count: usize = 0,
@@ -998,7 +1012,7 @@ pub const MultisampleState = extern struct {
 
 pub const RenderPipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     layout: ?PipelineLayout = null,
     vertex: VertexState,
     primitive: PrimitiveState = .{},
@@ -1009,7 +1023,7 @@ pub const RenderPipelineDescriptor = extern struct {
 
 pub const SamplerDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     address_mode_u: AddressMode = .clamp_to_edge,
     address_mode_v: AddressMode = .clamp_to_edge,
     address_mode_w: AddressMode = .clamp_to_edge,
@@ -1024,7 +1038,7 @@ pub const SamplerDescriptor = extern struct {
 
 pub const ShaderModuleDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
 };
 
 pub const ShaderSourceWGSL = extern struct {
@@ -1059,7 +1073,7 @@ pub const Extent3D = extern struct {
 
 pub const TextureDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     usage: TextureUsage,
     dimension: TextureDimension = .tdim_2d,
     size: Extent3D,
@@ -1123,12 +1137,12 @@ pub const InstanceDescriptor = extern struct {
 
 pub const QueueDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
 };
 
 pub const DeviceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     required_features_count: usize = 0,
     required_features: ?[*]const FeatureName = null,
     required_limits: ?*const Limits = null,
@@ -1139,7 +1153,7 @@ pub const DeviceDescriptor = extern struct {
 
 pub const SurfaceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
 };
 
 pub const RequestAdapterOptions = extern struct {
@@ -1162,7 +1176,7 @@ pub const PassTimestampWrites = extern struct {
 
 pub const ComputePassDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     timestamp_writes: ?*const PassTimestampWrites = null,
 };
 
@@ -1189,16 +1203,16 @@ pub const RenderPassDepthStencilAttachment = extern struct {
     depth_load_op: LoadOp = .undefined,
     depth_store_op: StoreOp = .undefined,
     depth_clear_value: f32 = 0.0,
-    depth_read_only: c.WGPUBool = c.WGPU_FALSE,
+    depth_read_only: OptionalBool = .false,
     stencil_load_op: LoadOp = .undefined,
     stencil_store_op: StoreOp = .undefined,
     stencil_clear_value: u32 = 0,
-    stencil_read_only: c.WGPUBool = c.WGPU_FALSE,
+    stencil_read_only: OptionalBool = .false,
 };
 
 pub const RenderPassDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     color_attachment_count: usize,
     color_attachments: ?[*]const RenderPassColorAttachment,
     depth_stencil_attachment: ?*const RenderPassDepthStencilAttachment = null,
@@ -1232,12 +1246,12 @@ pub const TexelCopyTextureInfo = extern struct {
 
 pub const CommandBufferDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
 };
 
 pub const TextureViewDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
     format: TextureFormat = .undefined,
     dimension: TextureViewDimension = .undefined,
     base_mip_level: u32 = 0,
@@ -1266,7 +1280,7 @@ pub const CompilationInfo = extern struct {
 
 pub const RenderBundleDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: c.WGPUStringView = StringView.initC(),
+    label: StringView = .{},
 };
 
 //

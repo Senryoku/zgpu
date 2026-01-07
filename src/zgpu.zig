@@ -540,7 +540,7 @@ pub const GraphicsContext = struct {
         const buffer_handle = gctx.createBuffer(.{
             .usage = .{ .copy_src = true, .map_write = true },
             .size = uniforms_buffer_size,
-            .mapped_at_creation = c.WGPU_TRUE,
+            .mapped_at_creation = .true,
         });
 
         // Add new (mapped) staging buffer to the buffer list.
@@ -967,7 +967,7 @@ pub const GraphicsContext = struct {
             .gpuobj = gctx.device.createBindGroupLayout(.{
                 .entry_count = @intCast(entries.len),
                 .entries = entries.ptr,
-                .label = if (opt.label) |label_in| wgpu.StringView.cFromZig(label_in) else wgpu.StringView.initC(),
+                .label = if (opt.label) |label_in| .init(label_in) else .{},
             }),
             .num_entries = @intCast(entries.len),
         };
@@ -1513,7 +1513,7 @@ pub fn createWgslShaderModule(
     };
     const desc = wgpu.ShaderModuleDescriptor{
         .next_in_chain = @ptrCast(&wgsl_source),
-        .label = if (label) |l| wgpu.StringView.cFromZig(l) else .{},
+        .label = if (label) |l| .init(l) else .{},
     };
     return device.createShaderModule(desc);
 }
@@ -1903,7 +1903,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.layer = src.layer;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.cFromZig(src.label),
+                .label = .init(src.label),
             });
         },
         .windows_hwnd => |src| blk: {
@@ -1914,7 +1914,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.hwnd = src.hwnd;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.cFromZig(src.label),
+                .label = .init(src.label),
             });
         },
         .xlib => |src| blk: {
@@ -1925,7 +1925,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.window = src.window;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.cFromZig(src.label),
+                .label = .init(src.label),
             });
         },
         .wayland => |src| blk: {
@@ -1936,7 +1936,7 @@ fn createSurfaceForWindow(instance: wgpu.Instance, window_provider: WindowProvid
             desc.surface = src.surface;
             break :blk instance.createSurface(.{
                 .next_in_chain = @ptrCast(&desc),
-                .label = wgpu.StringView.cFromZig(src.label),
+                .label = .init(src.label),
             });
         },
         // .canvas_html => |src| blk: {
