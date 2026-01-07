@@ -121,9 +121,7 @@ pub fn build(b: *std.Build) void {
     });
     b.installArtifact(zdawn);
     linkSystemDeps(b, zdawn);
-    try addLibraryPathsTo(b, zdawn);
 
-    // try webgpu_dawn.link(b, "webgpu_dawn", zdawn.root_module);
     zdawn.linkLibC();
     zdawn.linkLibCpp();
     zdawn.addIncludePath(b.path("src"));
@@ -141,7 +139,6 @@ pub fn build(b: *std.Build) void {
     });
     tests.addIncludePath(b.path("include"));
     linkSystemDeps(b, tests);
-    try addLibraryPathsTo(b, tests);
     b.installArtifact(tests);
     test_step.dependOn(&b.addRunArtifact(tests).step);
 }
@@ -199,9 +196,19 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
     }
 }
 
-pub fn addLibraryPathsTo(b: *std.Build, compile_step: *std.Build.Step.Compile) !void {
-    if (b.lazyDependency("webgpu_dawn", .{})) |dawn| {
-        compile_step.addLibraryPath(dawn.path("./build/src/dawn/native"));
+pub fn linkDawn(b: *std.Build, dep_name: []const u8, compile_step: *std.Build.Step.Compile) !void {
+    const dep = b.dependency(dep_name, .{});
+
+    compile_step.addLibraryPath(dep.path("./bin/x64"));
+    switch (compile_step.root_module.resolved_target.?.result.os.tag) {
+        .windows => {
+            compile_step.root_module.linkSystemLibrary("webgpu_dawn_windows", .{});
+            compile_step.root_module.linkSystemLibrary("mingw_helpers", .{});
+        },
+        .linux => {
+            compile_step.root_module.linkSystemLibrary("webgpu_dawn_linux", .{});
+        },
+        else => return error.UnsupportedOS,
     }
 }
 
