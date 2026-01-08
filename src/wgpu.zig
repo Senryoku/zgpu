@@ -1046,6 +1046,31 @@ pub const ShaderSourceWGSL = extern struct {
     code: c.WGPUStringView,
 };
 
+pub const SurfaceCapabilities = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    usages: TextureUsage = .{ ._padding = 0 },
+    format_count: usize = 0,
+    formats: ?[*]const TextureFormat = null,
+    present_mode_count: usize = 0,
+    present_modes: ?[*]const PresentMode = null,
+    alpha_mode_count: usize = 0,
+    alpha_modes: ?[*]const CompositeAlphaMode = null,
+
+    pub fn getFormats(self: @This()) []const TextureFormat {
+        return if (self.formats) |arr| arr[0..self.format_count] else &.{};
+    }
+    pub fn getPresentModes(self: @This()) []const PresentMode {
+        return if (self.present_modes) |arr| arr[0..self.present_mode_count] else &.{};
+    }
+    pub fn getAlphaModes(self: @This()) []const CompositeAlphaMode {
+        return if (self.alpha_modes) |arr| arr[0..self.alpha_mode_count] else &.{};
+    }
+
+    pub fn deinit(self: @This()) void {
+        c.wgpuSurfaceCapabilitiesFreeMembers(@bitCast(self));
+    }
+};
+
 pub const SurfaceConfiguration = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     device: Device,
@@ -2387,6 +2412,13 @@ pub const Surface = *opaque {
 
     pub fn present(surface: Surface) Status {
         return @enumFromInt(c.wgpuSurfacePresent(@ptrCast(surface)));
+    }
+
+    pub fn getCapabilities(surface: Surface, adapter: Adapter) !SurfaceCapabilities {
+        var capabilities: SurfaceCapabilities = undefined;
+        if (c.wgpuSurfaceGetCapabilities(@ptrCast(surface), @ptrCast(adapter), @ptrCast(&capabilities)) != @intFromEnum(Status.success))
+            return error.Unavailable;
+        return capabilities;
     }
 
     pub fn addRef(surface: Surface) void {
