@@ -324,6 +324,7 @@ pub const SType = enum(u32) {
     request_adapter_webxr_options = 0x0000000B,
     //...
     dawn_toggles_descriptor = 0x0005000A,
+    dawn_cache_device_descriptor = 0x00050007,
     //...
 };
 
@@ -706,6 +707,15 @@ pub const DawnTogglesDescriptor = extern struct {
     enabled_toggles: ?[*]const [*:0]const u8 = null,
     disabled_toggles_count: usize = 0,
     disabled_toggles: ?[*]const [*:0]const u8 = null,
+};
+
+// Can be chained in DeviceDescriptor/DawnTogglesDescriptor
+pub const DawnCacheDeviceDescriptor = extern struct {
+    chain: ChainedStruct = .{ .next = null, .struct_type = .dawn_cache_device_descriptor },
+    isolation_key: StringView = .{},
+    load_data_function: ?*const fn (key: [*]const u8, keySize: usize, value: ?[*]u8, valueSize: usize, userdata: ?*anyopaque) callconv(.c) usize = null, // WGPUDawnLoadCacheDataFunction
+    store_data_function: ?*const fn (key: [*]const u8, keySize: usize, value: [*]const u8, valueSize: usize, userdata: ?*anyopaque) callconv(.c) void = null, // WGPUDawnStoreCacheDataFunction
+    function_user_data: ?*anyopaque = null,
 };
 
 pub const AdapterInfo = extern struct {

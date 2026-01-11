@@ -80,6 +80,7 @@ pub const GraphicsContextOptions = struct {
     /// `wgpu.Limits`.  The upstream API has since dropped that wrapper, so we
     /// now pass the limits structure directly.
     required_limits: ?*const wgpu.Limits = null,
+    cache_descriptor: ?wgpu.DawnCacheDeviceDescriptor = null,
 };
 
 pub const GraphicsContext = struct {
@@ -293,7 +294,12 @@ pub const GraphicsContext = struct {
                 toggles[num_toggles] = "allow_unsafe_apis";
                 num_toggles += 1;
             }
+
             const dawn_toggles = wgpu.DawnTogglesDescriptor{
+                .chain = .{
+                    .next = if (options.cache_descriptor != null) @ptrCast(&options.cache_descriptor) else null,
+                    .struct_type = .dawn_toggles_descriptor,
+                },
                 .enabled_toggles_count = num_toggles,
                 .enabled_toggles = &toggles,
             };
