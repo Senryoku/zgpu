@@ -122,10 +122,10 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(zdawn);
     linkSystemDeps(b, zdawn);
 
-    zdawn.linkLibC();
-    zdawn.linkLibCpp();
-    zdawn.addIncludePath(b.path("src"));
-    zdawn.addIncludePath(b.path("include"));
+    root.link_libc = true;
+    root.link_libcpp = true;
+    root.addIncludePath(b.path("src"));
+    root.addIncludePath(b.path("include"));
 
     const test_step = b.step("test", "Run zgpu tests");
     const tests = b.addTest(.{
@@ -137,7 +137,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    tests.addIncludePath(b.path("include"));
+    tests.root_module.addIncludePath(b.path("include"));
     linkSystemDeps(b, tests);
     b.installArtifact(tests);
     test_step.dependOn(&b.addRunArtifact(tests).step);
@@ -172,25 +172,25 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
     switch (compile_step.rootModuleTarget().os.tag) {
         .windows => {
             if (b.lazyDependency("system_sdk", .{})) |system_sdk| {
-                compile_step.addLibraryPath(system_sdk.path("windows/lib/x86_64-windows-gnu"));
+                compile_step.root_module.addLibraryPath(system_sdk.path("windows/lib/x86_64-windows-gnu"));
             }
-            compile_step.linkSystemLibrary("ole32");
-            compile_step.linkSystemLibrary("oleaut32");
-            compile_step.linkSystemLibrary("dxguid");
-            compile_step.linkSystemLibrary("dbghelp");
+            compile_step.root_module.linkSystemLibrary("ole32", .{});
+            compile_step.root_module.linkSystemLibrary("oleaut32", .{});
+            compile_step.root_module.linkSystemLibrary("dxguid", .{});
+            compile_step.root_module.linkSystemLibrary("dbghelp", .{});
         },
         .macos => {
             if (b.lazyDependency("system_sdk", .{})) |system_sdk| {
-                compile_step.addLibraryPath(system_sdk.path("macos12/usr/lib"));
-                compile_step.addFrameworkPath(system_sdk.path("macos12/System/Library/Frameworks"));
+                compile_step.root_module.addLibraryPath(system_sdk.path("macos12/usr/lib"));
+                compile_step.root_module.addFrameworkPath(system_sdk.path("macos12/System/Library/Frameworks"));
             }
-            compile_step.linkSystemLibrary("objc");
-            compile_step.linkFramework("Metal");
-            compile_step.linkFramework("CoreGraphics");
-            compile_step.linkFramework("Foundation");
-            compile_step.linkFramework("IOKit");
-            compile_step.linkFramework("IOSurface");
-            compile_step.linkFramework("QuartzCore");
+            compile_step.root_module.linkSystemLibrary("objc", .{});
+            compile_step.root_module.linkFramework("Metal", .{});
+            compile_step.root_module.linkFramework("CoreGraphics", .{});
+            compile_step.root_module.linkFramework("Foundation", .{});
+            compile_step.root_module.linkFramework("IOKit", .{});
+            compile_step.root_module.linkFramework("IOSurface", .{});
+            compile_step.root_module.linkFramework("QuartzCore", .{});
         },
         else => {},
     }
@@ -199,7 +199,7 @@ pub fn linkSystemDeps(b: *std.Build, compile_step: *std.Build.Step.Compile) void
 pub fn linkDawn(b: *std.Build, dep_name: []const u8, compile_step: *std.Build.Step.Compile) !void {
     const dep = b.dependency(dep_name, .{});
 
-    compile_step.addLibraryPath(dep.path("./bin/x64"));
+    compile_step.root_module.addLibraryPath(dep.path("./bin/x64"));
     switch (compile_step.root_module.resolved_target.?.result.os.tag) {
         .windows => {
             compile_step.root_module.linkSystemLibrary("webgpu_dawn_windows", .{});

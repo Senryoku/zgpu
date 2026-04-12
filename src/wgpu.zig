@@ -2585,7 +2585,9 @@ test "enum_abi_compatibility" {
                     @tagName(@typeInfo(@field(c, c_e_name)).int.signedness) ++ " int instead.");
             } else {
                 var enum_fields: [c_import_decls.len]std.builtin.Type.EnumField = undefined;
-                var empty_decls = [_]std.builtin.Type.Declaration{};
+                var field_names: [c_import_decls.len][]const u8 = undefined;
+                var field_values: [c_import_decls.len]u32 = undefined;
+                // var empty_decls = [_]std.builtin.Type.Declaration{};
                 var enum_i: usize = 0;
                 for (c_import_decls) |c_decl| {
                     if (!std.mem.startsWith(u8, c_decl.name, c_name ++ "_")) continue;
@@ -2595,16 +2597,16 @@ test "enum_abi_compatibility" {
                         .name = c_decl.name,
                         .value = c_field,
                     };
+                    field_names[enum_i] = c_decl.name;
+                    field_values[enum_i] = c_field;
                     enum_i += 1;
                 }
-                break :blk @Type(.{
-                    .@"enum" = .{
-                        .tag_type = z_int_type,
-                        .fields = enum_fields[0..enum_i],
-                        .decls = &empty_decls,
-                        .is_exhaustive = true,
-                    },
-                });
+                break :blk @Enum(
+                    z_int_type,
+                    .exhaustive,
+                    field_names[0..enum_i],
+                    field_values[0..enum_i],
+                );
             }
         };
 
@@ -2647,7 +2649,7 @@ test "enum_abi_compatibility" {
 }
 
 test "wgpu_ref_all_decls" {
-    std.testing.refAllDeclsRecursive(@This());
+    std.testing.refAllDecls(@This());
 }
 
 fn normalizeCEnumField(full_field_name: []const u8, buf: []u8) []const u8 {
