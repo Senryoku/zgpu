@@ -1,7 +1,7 @@
 .{
     .name = .zgpu,
     .fingerprint = 0x670ebe04e453a19e,
-    .version = "0.14.0-dev",
+    .version = "0.15.0-dev",
     .minimum_zig_version = "0.16.0",
     .paths = .{
         "build.zig",
@@ -14,8 +14,8 @@
     },
     .dependencies = .{
         .zpool = .{
-            .url = "git+https://github.com/kcbanner/zpool#6bb259eaea37c0fdbb1e7da46ba5d40da3b46837",
-            .hash = "zpool-0.11.0-dev-bG692X9GAQC9w34IGA1ftrB1zgzRKAdrJWyphqBI72Li",
+            .url = "git+https://github.com/Senryoku/zpool#04892df650bae82c2c507f273b3a73c5342daa1c",
+            .hash = "zpool-0.11.0-dev-bG692YNGAQBc9Fg8FGxs6OsCson3OtBdnpuGiG-a7CWS",
         },
         .system_sdk = .{
             .url = "git+https://github.com/zig-gamedev/system_sdk#c0dbf11cdc17da5904ea8a17eadc54dee26567ec",

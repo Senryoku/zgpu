@@ -116,7 +116,6 @@ pub fn build(b: *std.Build) void {
 
     const zdawn = b.addLibrary(.{
         .name = "zdawn",
-        .use_llvm = true,
         .root_module = root,
     });
     b.installArtifact(zdawn);
@@ -130,7 +129,6 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run zgpu tests");
     const tests = b.addTest(.{
         .name = "zgpu-tests",
-        .use_llvm = true,
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/zgpu.zig"),
             .target = target,
