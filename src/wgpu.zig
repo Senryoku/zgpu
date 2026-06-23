@@ -1967,15 +1967,15 @@ pub const PipelineLayout = *opaque {
 
 pub const QuerySet = *opaque {
     pub fn destroy(query_set: QuerySet) void {
-        c.wgpuQuerySetDestroy(query_set);
+        c.wgpuQuerySetDestroy(@ptrCast(query_set));
     }
 
     pub fn setLabel(query_set: QuerySet, label: []const u8) void {
-        c.wgpuQuerySetSetLabel(query_set, StringView.cFromZig(label));
+        c.wgpuQuerySetSetLabel(@ptrCast(query_set), StringView.cFromZig(label));
     }
 
     pub fn addRef(query_set: QuerySet) void {
-        c.wgpuQuerySetAddRef(query_set);
+        c.wgpuQuerySetAddRef(@ptrCast(query_set));
     }
 
     pub fn release(query_set: QuerySet) void {
