@@ -7,6 +7,7 @@ const default_options = struct {
     const uniforms_buffer_size = 4 * 1024 * 1024;
     const dawn_skip_validation = false;
     const dawn_allow_unsafe_apis = false;
+    const dawn_disable_timestamp_quantization = false;
     const buffer_pool_size = 256;
     const texture_pool_size = 256;
     const texture_view_pool_size = 256;
@@ -40,6 +41,11 @@ pub fn build(b: *std.Build) void {
             "dawn_allow_unsafe_apis",
             "Allow unsafe WebGPU APIs (e.g. timestamp queries)",
         ) orelse default_options.dawn_allow_unsafe_apis,
+        .dawn_disable_timestamp_quantization = b.option(
+            bool,
+            "dawn_disable_timestamp_quantization",
+            "Disables Dawn timestamp_quantization (Lifts the default limitation on timestamp queries precision). Requires dawn_allow_unsafe_apis.",
+        ) orelse default_options.dawn_disable_timestamp_quantization,
         .buffer_pool_size = b.option(
             u32,
             "buffer_pool_size",

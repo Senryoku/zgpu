@@ -295,6 +295,13 @@ pub const GraphicsContext = struct {
                 num_toggles += 1;
             }
 
+            var disable_toggles: [1][*:0]const u8 = undefined;
+            var num_disable_toggles: usize = 0;
+            if (zgpu_options.dawn_disable_timestamp_quantization) {
+                disable_toggles[num_disable_toggles] = "timestamp_quantization";
+                num_disable_toggles += 1;
+            }
+
             const dawn_toggles = wgpu.DawnTogglesDescriptor{
                 .chain = .{
                     .next = if (options.cache_descriptor != null) @ptrCast(&options.cache_descriptor) else null,
@@ -302,6 +309,8 @@ pub const GraphicsContext = struct {
                 },
                 .enabled_toggles_count = num_toggles,
                 .enabled_toggles = &toggles,
+                .disabled_toggles_count = num_disable_toggles,
+                .disabled_toggles = &disable_toggles,
             };
 
             const device_descriptor = wgpu.DeviceDescriptor{
