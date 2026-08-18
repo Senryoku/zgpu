@@ -1443,7 +1443,7 @@ pub const Adapter = *opaque {
     }
 
     pub fn getLimits(adapter: Adapter, limits: *Limits) bool {
-        return c.wgpuAdapterGetLimits(@ptrCast(adapter), @ptrCast(limits));
+        return c.wgpuAdapterGetLimits(@ptrCast(adapter), @ptrCast(limits)) == @intFromEnum(True);
     }
 
     pub fn getInfo(adapter: Adapter, properties: *AdapterInfo) Status {
