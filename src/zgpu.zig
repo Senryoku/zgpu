@@ -11,7 +11,7 @@ const assert = std.debug.assert;
 const wgsl = @import("common_wgsl.zig");
 const zgpu_options = @import("zgpu_options");
 pub const wgpu = @import("wgpu.zig");
-const c = @cImport(@cInclude("webgpu/webgpu.h"));
+const c = @import("c");
 pub const slog = std.log.scoped(.zgpu); // scoped log that can be comptime processed in main logger
 // const emscripten = @import("builtin").target.os.tag == .emscripten;
 
@@ -116,8 +116,7 @@ pub const GraphicsContext = struct {
         stage: struct {
             num: u32 = 0,
             current: u32 = 0,
-            buffers: [uniforms_staging_pipeline_len]UniformsStagingBuffer =
-                [_]UniformsStagingBuffer{.{}} ** uniforms_staging_pipeline_len,
+            buffers: [uniforms_staging_pipeline_len]UniformsStagingBuffer = @splat(.{}),
         } = .{},
     } = .{},
 
@@ -1163,8 +1162,7 @@ pub const GraphicsContext = struct {
     const MipgenResources = struct {
         pipeline: ComputePipelineHandle = .{},
         scratch_texture: TextureHandle = .{},
-        scratch_texture_views: [max_levels_per_dispatch]TextureViewHandle =
-            [_]TextureViewHandle{.{}} ** max_levels_per_dispatch,
+        scratch_texture_views: [max_levels_per_dispatch]TextureViewHandle = @splat(.{}),
         bind_group_layout: BindGroupLayoutHandle = .{},
 
         const max_levels_per_dispatch = 4;
@@ -1621,15 +1619,13 @@ const max_num_bindings_per_group = zgpu_options.max_num_bindings_per_group;
 pub const BindGroupInfo = struct {
     gpuobj: ?wgpu.BindGroup = null,
     num_entries: u32 = 0,
-    entries: [max_num_bindings_per_group]BindGroupEntryInfo =
-        [_]BindGroupEntryInfo{.{}} ** max_num_bindings_per_group,
+    entries: [max_num_bindings_per_group]BindGroupEntryInfo = @splat(.{}),
 };
 
 pub const BindGroupLayoutInfo = struct {
     gpuobj: ?wgpu.BindGroupLayout = null,
     num_entries: u32 = 0,
-    entries: [max_num_bindings_per_group]wgpu.BindGroupLayoutEntry =
-        [_]wgpu.BindGroupLayoutEntry{.{ .binding = 0, .visibility = .{} }} ** max_num_bindings_per_group,
+    entries: [max_num_bindings_per_group]wgpu.BindGroupLayoutEntry = @splat(.{}),
 };
 
 const max_num_bind_groups_per_pipeline = zgpu_options.max_num_bind_groups_per_pipeline;
@@ -1637,8 +1633,7 @@ const max_num_bind_groups_per_pipeline = zgpu_options.max_num_bind_groups_per_pi
 pub const PipelineLayoutInfo = struct {
     gpuobj: ?wgpu.PipelineLayout = null,
     num_bind_group_layouts: u32 = 0,
-    bind_group_layouts: [max_num_bind_groups_per_pipeline]BindGroupLayoutHandle =
-        [_]BindGroupLayoutHandle{.{}} ** max_num_bind_groups_per_pipeline,
+    bind_group_layouts: [max_num_bind_groups_per_pipeline]BindGroupLayoutHandle = @splat(.{}),
 };
 
 pub const BufferHandle = BufferPool.Handle;

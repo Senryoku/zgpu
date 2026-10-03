@@ -1,5 +1,6 @@
 const std = @import("std");
 const log = std.log.scoped(.zgpu);
+const Translator = @import("translate_c").Translator;
 
 const webgpu_dawn = @import("webgpu_dawn");
 
@@ -104,11 +105,19 @@ pub fn build(b: *std.Build) void {
     };
 
     const options_step = b.addOptions();
-    inline for (std.meta.fields(@TypeOf(options))) |field| {
-        options_step.addOption(field.type, field.name, @field(options, field.name));
+    inline for (@typeInfo(@TypeOf(options)).@"struct".field_types, @typeInfo(@TypeOf(options)).@"struct".field_names) |field_type, field_name| {
+        options_step.addOption(field_type, field_name, @field(options, field_name));
     }
 
     const options_module = options_step.createModule();
+
+    const translate_c = b.dependency("translate_c", .{});
+
+    const translator: Translator = .init(translate_c, .{
+        .c_source_file = b.path("include/webgpu/webgpu.h"),
+        .target = target,
+        .optimize = optimize,
+    });
 
     const root = b.addModule("root", .{
         .root_source_file = b.path("src/zgpu.zig"),
@@ -117,6 +126,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "zgpu_options", .module = options_module },
             .{ .name = "zpool", .module = b.dependency("zpool", .{}).module("root") },
+            .{ .name = "c", .module = translator.mod },
         },
     });
 
@@ -139,6 +149,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/zgpu.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "c", .module = translator.mod },
+            },
         }),
     });
     tests.root_module.addIncludePath(b.path("include"));

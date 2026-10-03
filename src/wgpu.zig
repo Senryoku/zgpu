@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @cImport(@cInclude("webgpu/webgpu.h"));
+const c = @import("c");
 pub const slog = std.log.scoped(.wgpu);
 
 pub const True = OptionalBool.true;
@@ -661,7 +661,7 @@ pub const ChainedStruct = extern struct {
 pub const ChainedStructOut = extern struct {
     next: ?*ChainedStructOut,
     struct_type: SType,
-    const _skip_abi_compat = true;
+    pub const _skip_abi_compat = true;
 };
 
 pub const StringView = extern struct {
@@ -698,6 +698,10 @@ comptime {
     std.debug.assert(@offsetOf(StringView, "length") == @offsetOf(c.WGPUStringView, "length"));
 }
 
+fn nullWGPUStringView() c.WGPUStringView {
+    return .{ .data = null, .length = 0 };
+}
+
 // Can be chained in InstanceDescriptor
 // Can be chained in RequestAdapterOptions
 // Can be chained in DeviceDescriptor
@@ -720,10 +724,10 @@ pub const DawnCacheDeviceDescriptor = extern struct {
 
 pub const AdapterInfo = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    vendor_name: c.WGPUStringView = .{},
-    architecture: c.WGPUStringView = .{},
-    device: c.WGPUStringView = .{},
-    description: c.WGPUStringView = .{},
+    vendor_name: c.WGPUStringView = nullWGPUStringView(),
+    architecture: c.WGPUStringView = nullWGPUStringView(),
+    device: c.WGPUStringView = nullWGPUStringView(),
+    description: c.WGPUStringView = nullWGPUStringView(),
     backend_type: BackendType = .undefined,
     adapter_type: AdapterType = .unknown,
     vendor_id: u32 = 0,
@@ -1421,7 +1425,7 @@ pub const Instance = *opaque {
     }
 
     pub fn waitAny(instance: Instance, futures: []FutureWaitInfo, timeout_ns: u64) WaitStatus {
-        return @enumFromInt(c.wgpuInstanceWaitAny(@ptrCast(instance), futures.len, @ptrCast(futures.ptr), timeout_ns));
+        return @fromBackingInt(@intCast(c.wgpuInstanceWaitAny(@ptrCast(instance), futures.len, @ptrCast(futures.ptr), timeout_ns)));
     }
 
     pub fn processEvents(instance: Instance) void {
@@ -1443,11 +1447,11 @@ pub const Adapter = *opaque {
     }
 
     pub fn getLimits(adapter: Adapter, limits: *Limits) bool {
-        return c.wgpuAdapterGetLimits(@ptrCast(adapter), @ptrCast(limits)) == @intFromEnum(True);
+        return c.wgpuAdapterGetLimits(@ptrCast(adapter), @ptrCast(limits)) == @backingInt(True);
     }
 
     pub fn getInfo(adapter: Adapter, properties: *AdapterInfo) Status {
-        return @enumFromInt(c.wgpuAdapterGetInfo(@ptrCast(adapter), @ptrCast(properties)));
+        return @fromBackingInt(@intCast(c.wgpuAdapterGetInfo(@ptrCast(adapter), @ptrCast(properties))));
     }
 
     pub fn hasFeature(adapter: Adapter, feature: FeatureName) bool {
@@ -1552,7 +1556,7 @@ pub const Device = *opaque {
     }
 
     pub fn getLimits(device: Device, limits: *Limits) bool {
-        return c.wgpuDeviceGetLimits(@ptrCast(device), @ptrCast(limits)) == @intFromEnum(True);
+        return c.wgpuDeviceGetLimits(@ptrCast(device), @ptrCast(limits)) == @backingInt(True);
     }
 
     pub fn getQueue(device: Device) Queue {
@@ -1568,7 +1572,7 @@ pub const Device = *opaque {
     }
 
     pub fn pushErrorScope(device: Device, filter: ErrorFilter) void {
-        c.wgpuDevicePushErrorScope(@ptrCast(device), @intFromEnum(filter));
+        c.wgpuDevicePushErrorScope(@ptrCast(device), @backingInt(filter));
     }
 
     pub fn setLabel(device: Device, label: []const u8) void {
@@ -2290,7 +2294,7 @@ pub const RenderPassEncoder = *opaque {
         offset: u64,
         size: u64,
     ) void {
-        c.wgpuRenderPassEncoderSetIndexBuffer(@ptrCast(render_pass_encoder), @ptrCast(buffer), @intFromEnum(format), offset, size);
+        c.wgpuRenderPassEncoderSetIndexBuffer(@ptrCast(render_pass_encoder), @ptrCast(buffer), @backingInt(format), offset, size);
     }
 
     pub fn setLabel(render_pass_encoder: RenderPassEncoder, label: []const u8) void {
@@ -2421,12 +2425,12 @@ pub const Surface = *opaque {
     }
 
     pub fn present(surface: Surface) Status {
-        return @enumFromInt(c.wgpuSurfacePresent(@ptrCast(surface)));
+        return @fromBackingInt(@intCast(c.wgpuSurfacePresent(@ptrCast(surface))));
     }
 
     pub fn getCapabilities(surface: Surface, adapter: Adapter) !SurfaceCapabilities {
         var capabilities: SurfaceCapabilities = undefined;
-        if (c.wgpuSurfaceGetCapabilities(@ptrCast(surface), @ptrCast(adapter), @ptrCast(&capabilities)) != @intFromEnum(Status.success))
+        if (c.wgpuSurfaceGetCapabilities(@ptrCast(surface), @ptrCast(adapter), @ptrCast(&capabilities)) != @backingInt(Status.success))
             return error.Unavailable;
         return capabilities;
     }
@@ -2497,35 +2501,35 @@ test "extern_struct_abi_compatibility" {
 
     slog.info("checking struct ABI compatibility...", .{});
     inline for (comptime std.meta.declarations(@This())) |decl| {
-        const ZigStruct = @field(@This(), decl.name);
+        const ZigStruct = @field(@This(), decl);
         if (@TypeOf(ZigStruct) != type) continue;
         if (comptime std.meta.activeTag(@typeInfo(ZigStruct)) != .@"struct") continue;
         if (@typeInfo(ZigStruct).@"struct".layout != .@"extern") continue;
         if (@hasDecl(ZigStruct, "_skip_abi_compat")) continue;
-        const c_name = c_prefix ++ decl.name;
+        const c_name = c_prefix ++ decl;
 
         // Existence check - if the zig source still declares a struct that no longer
         // exists in the C header, the tests will fail to compile
         const CStruct = comptime blk: {
             if (!@hasDecl(c, c_name)) {
-                @compileError("Missing C struct " ++ c_name ++ " to match " ++ decl.name ++
-                    ". Declare a const _skip_abi_compat inside " ++ decl.name ++ " to exclude.");
+                @compileError("Missing C struct " ++ c_name ++ " to match " ++ decl ++
+                    ". Declare a const _skip_abi_compat inside " ++ decl ++ " to exclude.");
             } else break :blk @field(c, c_name);
         };
 
         // Size check
         std.testing.expectEqual(@sizeOf(CStruct), @sizeOf(ZigStruct)) catch |err| {
-            slog.err("@sizeOf({s}) != @sizeOf({s})", .{ c_name, decl.name });
+            slog.err("@sizeOf({s}) != @sizeOf({s})", .{ c_name, decl });
             return err;
         };
 
         // Field‑count check
-        const zig_fields = std.meta.fields(ZigStruct);
-        const c_fields = std.meta.fields(CStruct);
+        const zig_fields = @typeInfo(ZigStruct).@"struct".field_names;
+        const c_fields = @typeInfo(CStruct).@"struct".field_names;
         if (c_fields.len != zig_fields.len) {
             slog.err(
                 "Field count mismatch: C `{s}` has {d} fields, Zig `{s}` has {d}",
-                .{ c_name, c_fields.len, decl.name, zig_fields.len },
+                .{ c_name, c_fields.len, decl, zig_fields.len },
             );
             continue;
         }
@@ -2536,18 +2540,18 @@ test "extern_struct_abi_compatibility" {
             const zig_f = zig_fields[i];
             const c_f = c_fields[i];
             std.testing.expectEqual(
-                @offsetOf(CStruct, c_f.name),
-                @offsetOf(ZigStruct, zig_f.name),
+                @offsetOf(CStruct, c_f),
+                @offsetOf(ZigStruct, zig_f),
             ) catch |err| {
                 slog.err(
                     "Offset mismatch at index {d}: C.{s} vs Zig.{s}",
-                    .{ i, c_f.name, zig_f.name },
+                    .{ i, c_f, zig_f },
                 );
                 return err;
             };
         }
 
-        slog.debug("\tchecked {s} == {s}", .{ c_name, decl.name });
+        slog.debug("\tchecked {s} == {s}", .{ c_name, decl });
     }
 }
 
@@ -2561,18 +2565,18 @@ test "enum_abi_compatibility" {
     };
 
     inline for (comptime std.meta.declarations(@This())) |decl| {
-        const ZigEnum = @field(@This(), decl.name);
+        const ZigEnum = @field(@This(), decl);
         if (@TypeOf(ZigEnum) != type) continue;
         if (comptime std.meta.activeTag(@typeInfo(ZigEnum)) != .@"enum") continue;
 
         const z_int_type = @typeInfo(ZigEnum).@"enum".tag_type;
         const z_int_bits = @typeInfo(z_int_type).int.bits;
         const z_int_sign = @typeInfo(z_int_type).int.signedness;
-        const c_name = c_prefix ++ decl.name;
+        const c_name = c_prefix ++ decl;
         const c_e_name = "enum_" ++ c_name;
         const CEnum = comptime blk: {
             if (!@hasDecl(c, c_e_name)) {
-                @compileError("Missing C enum " ++ c_name ++ " to match " ++ decl.name);
+                @compileError("Missing C enum " ++ c_name ++ " to match " ++ decl);
             } else if (std.meta.activeTag(@typeInfo(@field(c, c_e_name))) != .int) {
                 @compileError("Expected " ++ c_name ++ " to be an enum with inter type.");
             } else if (@typeInfo(@field(c, c_e_name)).int.bits != z_int_bits) {
@@ -2584,20 +2588,15 @@ test "enum_abi_compatibility" {
                     @tagName(z_int_sign) ++ " int type, but found " ++
                     @tagName(@typeInfo(@field(c, c_e_name)).int.signedness) ++ " int instead.");
             } else {
-                var enum_fields: [c_import_decls.len]std.builtin.Type.EnumField = undefined;
                 var field_names: [c_import_decls.len][]const u8 = undefined;
                 var field_values: [c_import_decls.len]u32 = undefined;
                 // var empty_decls = [_]std.builtin.Type.Declaration{};
                 var enum_i: usize = 0;
                 for (c_import_decls) |c_decl| {
-                    if (!std.mem.startsWith(u8, c_decl.name, c_name ++ "_")) continue;
-                    const c_field = @field(c, c_decl.name);
+                    if (!std.mem.startsWith(u8, c_decl, c_name ++ "_")) continue;
+                    const c_field = @field(c, c_decl);
                     if (std.meta.activeTag(@typeInfo(@TypeOf(c_field))) != .int) continue;
-                    enum_fields[enum_i] = .{
-                        .name = c_decl.name,
-                        .value = c_field,
-                    };
-                    field_names[enum_i] = c_decl.name;
+                    field_names[enum_i] = c_decl;
                     field_values[enum_i] = c_field;
                     enum_i += 1;
                 }
@@ -2610,40 +2609,41 @@ test "enum_abi_compatibility" {
             }
         };
 
-        const zig_fields = std.meta.fields(ZigEnum);
-        const c_fields = std.meta.fields(CEnum);
+        const zig_field_names = @typeInfo(ZigEnum).@"enum".field_names;
+        const c_field_names = @typeInfo(CEnum).@"enum".field_names;
+        const c_field_values = @typeInfo(CEnum).@"enum".field_values;
 
-        inline for (c_fields) |c_field| {
+        inline for (c_field_names, c_field_values) |c_field_name, c_field_value| {
             const short_name = comptime blk: {
                 var str_buf: [max_supported_enum_name_len]u8 = undefined;
-                const normalized = normalizeCEnumField(c_field.name, str_buf[0..]);
+                const normalized = normalizeCEnumField(c_field_name, str_buf[0..]);
                 break :blk std.fmt.comptimePrint("{s}", .{normalized});
             };
 
             if (std.meta.fieldIndex(ZigEnum, short_name)) |i| {
-                const zig_field = zig_fields[i];
-                const zig_val = @intFromEnum(@field(ZigEnum, zig_field.name));
-                if (zig_val != c_field.value) {
+                const zig_field_name = zig_field_names[i];
+                const zig_val = @backingInt(@field(ZigEnum, zig_field_name));
+                if (zig_val != c_field_value) {
                     slog.err(
                         "enum value mismatch: {s} == {}, but {s}.{s} == {}",
-                        .{ c_field.name, c_field.value, decl.name, short_name, zig_val },
+                        .{ c_field_name, c_field_value, decl, short_name, zig_val },
                     );
                     return error.EnumValueMismatch;
                 }
             } else {
-                if (!std.mem.endsWith(u8, c_field.name, "Force32")) {
+                if (!std.mem.endsWith(u8, c_field_name, "Force32")) {
                     slog.warn("missing Zig enum field for {s} (expected {s}.{s})", .{
-                        c_field.name, decl.name, short_name,
+                        c_field_name, decl, short_name,
                     });
 
                     // slog.err("missing Zig enum field for {s} (expected {s}.{s})", .{
-                    //     c_field.name, decl.name, short_name,
+                    //     c_field_name, decl, short_name,
                     // });
                     // return error.EnumFieldMissing;
                 }
             }
 
-            slog.debug("\tchecked {s} == {s}.{s}", .{ c_field.name, decl.name, short_name });
+            slog.debug("\tchecked {s} == {s}.{s}", .{ c_field_name, decl, short_name });
         }
     }
 }
