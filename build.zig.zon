@@ -14,8 +14,8 @@
     },
     .dependencies = .{
         .zpool = .{
-            .url = "git+https://github.com/Senryoku/zpool.git#39a28d59945d24c5994662a737f6098e0f365e5a",
-            .hash = "zpool-0.11.0-dev-bG692e1IAQB7ZFYV_hUVWOM8P9OOh-hFip4ezrwLcx1P",
+            .url = "git+https://github.com/Senryoku/zpool.git#64c5c619fe2fefaeb63097e0f149434cc0ad8cd2",
+            .hash = "zpool-0.11.0-dev-bG692QZJAQCOcjMccdWIpA2WX2bylMIL_rQSINac67Pr",
         },
         .system_sdk = .{
             .url = "git+https://github.com/zig-gamedev/system_sdk#c0dbf11cdc17da5904ea8a17eadc54dee26567ec",
