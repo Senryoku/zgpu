@@ -214,7 +214,64 @@ pub const FeatureName = enum(u32) {
     texture_formats_tier1 = 0x00000013,
     texture_formats_tier2 = 0x00000014,
     //...
+    dawn_internal_usages = 0x00050000,
+    dawn_multi_planar_formats = 0x00050001,
+    dawn_native = 0x00050002,
     chromium_experimental_timestamp_query_inside_passes = 0x00050003,
+    implicit_device_synchronization = 0x00050004,
+    transient_attachments = 0x00050006,
+    msaa_render_to_single_sampled = 0x00050007,
+    d3d11_multithread_protected = 0x00050008,
+    angle_texture_sharing = 0x00050009,
+    pixel_local_storage_coherent = 0x0005000A,
+    pixel_local_storage_non_coherent = 0x0005000B,
+    unorm16_texture_formats = 0x0005000C,
+    snorm16_texture_formats = 0x0005000D,
+    multi_planar_format_extended_usages = 0x0005000E,
+    multi_planar_format_p010 = 0x0005000F,
+    host_mapped_pointer = 0x00050010,
+    multi_planar_render_targets = 0x00050011,
+    multi_planar_format_nv12a = 0x00050012,
+    framebuffer_fetch = 0x00050013,
+    buffer_map_extended_usages = 0x00050014,
+    adapter_properties_memory_heaps = 0x00050015,
+    adapter_properties_d3d = 0x00050016,
+    adapter_properties_vk = 0x00050017,
+    r8_unorm_storage = 0x00050018,
+    dawn_format_capabilities = 0x00050019,
+    dawn_drm_format_capabilities = 0x0005001A,
+    norm16_texture_formats = 0x0005001B,
+    multi_planar_format_nv16 = 0x0005001C,
+    multi_planar_format_nv24 = 0x0005001D,
+    multi_planar_format_p210 = 0x0005001E,
+    multi_planar_format_p410 = 0x0005001F,
+    shared_texture_memory_vk_dedicated_allocation = 0x00050020,
+    shared_texture_memory_a_hardware_buffer = 0x00050021,
+    shared_texture_memory_dma_buf = 0x00050022,
+    shared_texture_memory_opaque_fd = 0x00050023,
+    shared_texture_memory_zircon_handle = 0x00050024,
+    shared_texture_memory_dxgi_shared_handle = 0x00050025,
+    shared_texture_memory_d3d11_texture2d = 0x00050026,
+    shared_texture_memory_io_surface = 0x00050027,
+    shared_texture_memory_egl_image = 0x00050028,
+    shared_fence_vk_semaphore_opaque_fd = 0x00050029,
+    shared_fence_sync_fd = 0x0005002A,
+    shared_fence_vk_semaphore_zircon_handle = 0x0005002B,
+    shared_fence_dxgi_shared_handle = 0x0005002C,
+    shared_fence_mtl_shared_event = 0x0005002D,
+    shared_buffer_memory_d3d12_resource = 0x0005002E,
+    static_samplers = 0x0005002F,
+    y_cb_cr_vulkan_samplers = 0x00050030,
+    shader_module_compilation_options = 0x00050031,
+    dawn_load_resolve_texture = 0x00050032,
+    dawn_partial_load_resolve_texture = 0x00050033,
+    multi_draw_indirect = 0x00050034,
+    dawn_texel_copy_buffer_row_alignment = 0x00050035,
+    flexible_texture_views = 0x00050036,
+    chromium_experimental_subgroup_matrix = 0x00050037,
+    shared_fence_egl_sync = 0x00050038,
+    dawn_device_allocator_control = 0x00050039,
+    texture_component_swizzle = 0x0005003A,
     //...
 };
 
@@ -246,6 +303,7 @@ pub const LoadOp = enum(u32) {
     undefined = 0x00000000,
     load = 0x00000001,
     clear = 0x00000002,
+    expand_resolve_texture = 0x00050003,
 };
 
 pub const PowerPreference = enum(u32) {
@@ -323,9 +381,81 @@ pub const SType = enum(u32) {
     surface_color_management = 0x0000000A,
     request_adapter_webxr_options = 0x0000000B,
     //...
-    dawn_toggles_descriptor = 0x0005000A,
-    dawn_cache_device_descriptor = 0x00050007,
+    compatibility_mode_limits = 0x00020000,
+    texture_binding_view_dimension_descriptor = 0x00020001,
+    emscripten_surface_source_canvas_html_selector = 0x00040000,
     //...
+    surface_descriptor_from_windows_core_window = 0x00050000,
+    external_texture_binding_entry = 0x00050001,
+    external_texture_binding_layout = 0x00050002,
+    surface_descriptor_from_windows_uwp_swap_chain_panel = 0x00050003,
+    dawn_texture_internal_usage_descriptor = 0x00050004,
+    dawn_encoder_internal_usage_descriptor = 0x00050005,
+    dawn_instance_descriptor = 0x00050006,
+    dawn_cache_device_descriptor = 0x00050007,
+    dawn_adapter_properties_power_preference = 0x00050008,
+    dawn_buffer_descriptor_error_info_from_wire_client = 0x00050009,
+    dawn_toggles_descriptor = 0x0005000A,
+    dawn_shader_module_spirv_options_descriptor = 0x0005000B,
+    request_adapter_options_luid = 0x0005000C,
+    request_adapter_options_get_gl_proc = 0x0005000D,
+    request_adapter_options_d3d11_device = 0x0005000E,
+    dawn_render_pass_color_attachment_render_to_single_sampled = 0x0005000F,
+    render_pass_pixel_local_storage = 0x00050010,
+    pipeline_layout_pixel_local_storage = 0x00050011,
+    buffer_host_mapped_pointer = 0x00050012,
+    adapter_properties_memory_heaps = 0x00050013,
+    adapter_properties_d3d = 0x00050014,
+    adapter_properties_vk = 0x00050015,
+    dawn_wire_wgsl_control = 0x00050016,
+    dawn_wgsl_blocklist = 0x00050017,
+    dawn_drm_format_capabilities = 0x00050018,
+    shader_module_compilation_options = 0x00050019,
+    color_target_state_expand_resolve_texture_dawn = 0x0005001A,
+    render_pass_descriptor_expand_resolve_rect = 0x0005001B,
+    shared_texture_memory_vk_dedicated_allocation_descriptor = 0x0005001C,
+    shared_texture_memory_a_hardware_buffer_descriptor = 0x0005001D,
+    shared_texture_memory_dma_buf_descriptor = 0x0005001E,
+    shared_texture_memory_opaque_fd_descriptor = 0x0005001F,
+    shared_texture_memory_zircon_handle_descriptor = 0x00050020,
+    shared_texture_memory_dxgi_shared_handle_descriptor = 0x00050021,
+    shared_texture_memory_d3d11_texture2d_descriptor = 0x00050022,
+    shared_texture_memory_io_surface_descriptor = 0x00050023,
+    shared_texture_memory_egl_image_descriptor = 0x00050024,
+    shared_texture_memory_initialized_begin_state = 0x00050025,
+    shared_texture_memory_initialized_end_state = 0x00050026,
+    shared_texture_memory_vk_image_layout_begin_state = 0x00050027,
+    shared_texture_memory_vk_image_layout_end_state = 0x00050028,
+    shared_texture_memory_d3d_swapchain_begin_state = 0x00050029,
+    shared_fence_vk_semaphore_opaque_fd_descriptor = 0x0005002A,
+    shared_fence_vk_semaphore_opaque_fd_export_info = 0x0005002B,
+    shared_fence_sync_fd_descriptor = 0x0005002C,
+    shared_fence_sync_fd_export_info = 0x0005002D,
+    shared_fence_vk_semaphore_zircon_handle_descriptor = 0x0005002E,
+    shared_fence_vk_semaphore_zircon_handle_export_info = 0x0005002F,
+    shared_fence_dxgi_shared_handle_descriptor = 0x00050030,
+    shared_fence_dxgi_shared_handle_export_info = 0x00050031,
+    shared_fence_mtl_shared_event_descriptor = 0x00050032,
+    shared_fence_mtl_shared_event_export_info = 0x00050033,
+    shared_buffer_memory_d3d12_resource_descriptor = 0x00050034,
+    static_sampler_binding_layout = 0x00050035,
+    y_cb_cr_vk_descriptor = 0x00050036,
+    shared_texture_memory_a_hardware_buffer_properties = 0x00050037,
+    a_hardware_buffer_properties = 0x00050038,
+    dawn_texel_copy_buffer_row_alignment_limits = 0x0005003A,
+    adapter_properties_subgroup_matrix_configs = 0x0005003B,
+    shared_fence_egl_sync_descriptor = 0x0005003C,
+    shared_fence_egl_sync_export_info = 0x0005003D,
+    dawn_injected_invalid_s_type = 0x0005003E,
+    dawn_compilation_message_utf16 = 0x0005003F,
+    dawn_fake_buffer_oom_for_testing = 0x00050040,
+    surface_descriptor_from_windows_win_ui_swap_chain_panel = 0x00050041,
+    dawn_device_allocator_control = 0x00050042,
+    dawn_host_mapped_pointer_limits = 0x00050043,
+    render_pass_descriptor_resolve_rect = 0x00050044,
+    request_adapter_web_gpu_backend_options = 0x00050045,
+    dawn_fake_device_initialize_error_for_testing = 0x00050046,
+    texture_component_swizzle_descriptor = 0x00050047,
 };
 
 pub const SamplerBindingType = enum(u32) {
@@ -367,6 +497,10 @@ pub const TextureAspect = enum(u32) {
     all = 0x00000001,
     stencil_only = 0x00000002,
     depth_only = 0x00000003,
+    // ...
+    plane0_only = 0x00050000,
+    plane1_only = 0x00050001,
+    plane2_only = 0x00050002,
 };
 
 pub const TextureDimension = enum(u32) {
@@ -858,8 +992,8 @@ pub const StorageTextureBindingLayout = extern struct {
 
 pub const BindGroupLayoutEntry = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    binding: u32,
-    visibility: ShaderStage,
+    binding: u32 = 0,
+    visibility: ShaderStage = .{},
     binding_array_size: u32 = 0,
     buffer: BufferBindingLayout = .{ .binding_type = .binding_not_used },
     sampler: SamplerBindingLayout = .{ .binding_type = .binding_not_used },
@@ -1081,7 +1215,7 @@ pub const SurfaceCapabilities = extern struct {
     }
 
     pub fn deinit(self: @This()) void {
-        c.wgpuSurfaceCapabilitiesFreeMembers(@bitCast(self));
+        c.wgpuSurfaceCapabilitiesFreeMembers(externBitCast(c.WGPUSurfaceCapabilities, self));
     }
 };
 
@@ -1407,6 +1541,13 @@ pub const CompilationInfoCallback = *const fn (
 // Section: Opaques/Functions
 //
 
+/// zig 0.17.0 removed @bitCast on extern struct, suggesting pointer casting as a workaround.
+inline fn externBitCast(comptime T: type, value: anytype) T {
+    std.debug.assert(@sizeOf(T) == @sizeOf(@TypeOf(value)));
+    const ptr: *align(1) const T = @ptrCast(&value);
+    return ptr.*;
+}
+
 pub inline fn createInstance(desc: ?InstanceDescriptor) Instance {
     return @ptrCast(c.wgpuCreateInstance(if (desc) |d| @ptrCast(&d) else null));
 }
@@ -1421,7 +1562,7 @@ pub const Instance = *opaque {
         options: RequestAdapterOptions,
         callback_info: RequestAdapterCallbackInfo,
     ) Future {
-        return @bitCast(c.wgpuInstanceRequestAdapter(@ptrCast(instance), @ptrCast(&options), @bitCast(callback_info)));
+        return externBitCast(Future, c.wgpuInstanceRequestAdapter(@ptrCast(instance), @ptrCast(&options), externBitCast(c.WGPURequestAdapterCallbackInfo, callback_info)));
     }
 
     pub fn waitAny(instance: Instance, futures: []FutureWaitInfo, timeout_ns: u64) WaitStatus {
@@ -1463,7 +1604,7 @@ pub const Adapter = *opaque {
         descriptor: DeviceDescriptor,
         callback_info: RequestDeviceCallbackInfo,
     ) Future {
-        return @bitCast(c.wgpuAdapterRequestDevice(@ptrCast(adapter), @ptrCast(&descriptor), @bitCast(callback_info)));
+        return externBitCast(Future, c.wgpuAdapterRequestDevice(@ptrCast(adapter), @ptrCast(&descriptor), externBitCast(c.WGPURequestDeviceCallbackInfo, callback_info)));
     }
 
     pub fn addRef(adapter: Adapter) void {
@@ -1501,10 +1642,10 @@ pub const Device = *opaque {
         descriptor: ComputePipelineDescriptor,
         callback_info: CreateComputePipelineAsyncCallbackInfo,
     ) Future {
-        return @bitCast(c.wgpuDeviceCreateComputePipelineAsync(
+        return externBitCast(Future, c.wgpuDeviceCreateComputePipelineAsync(
             @ptrCast(device),
             @ptrCast(&descriptor),
-            @bitCast(callback_info),
+            externBitCast(c.WGPUCreateComputePipelineAsyncCallbackInfo, callback_info),
         ));
     }
 
@@ -1532,10 +1673,10 @@ pub const Device = *opaque {
         descriptor: RenderPipelineDescriptor,
         callback_info: CreateRenderPipelineAsyncCallbackInfo,
     ) Future {
-        return @bitCast(c.wgpuDeviceCreateRenderPipelineAsync(
+        return externBitCast(Future, c.wgpuDeviceCreateRenderPipelineAsync(
             @ptrCast(device),
             @ptrCast(&descriptor),
-            @bitCast(callback_info),
+            externBitCast(c.WGPUCreateRenderPipelineAsyncCallbackInfo, callback_info),
         ));
     }
 
@@ -1660,7 +1801,7 @@ pub const Buffer = *opaque {
         size: usize,
         callback_info: BufferMapCallbackInfo,
     ) Future {
-        return @bitCast(c.wgpuBufferMapAsync(@ptrCast(buffer), @bitCast(mode), offset, size, @bitCast(callback_info)));
+        return externBitCast(Future, c.wgpuBufferMapAsync(@ptrCast(buffer), @bitCast(mode), offset, size, externBitCast(c.WGPUBufferMapCallbackInfo, callback_info)));
     }
 
     pub fn setLabel(buffer: Buffer, label: []const u8) void {
@@ -1992,7 +2133,7 @@ pub const Queue = *opaque {
         queue: Queue,
         callback_info: QueueWorkDoneCallbackInfo,
     ) Future {
-        return @bitCast(c.wgpuQueueOnSubmittedWorkDone(@ptrCast(queue), @bitCast(callback_info)));
+        return externBitCast(Future, c.wgpuQueueOnSubmittedWorkDone(@ptrCast(queue), externBitCast(c.WGPUQueueWorkDoneCallbackInfo, callback_info)));
     }
 
     pub fn setLabel(queue: Queue, label: []const u8) void {
@@ -2662,10 +2803,21 @@ fn normalizeCEnumField(full_field_name: []const u8, buf: []u8) []const u8 {
     const suffix = full_field_name[(idx + 1)..];
     if (hardcodedSuffixReplacement(suffix)) |replacement| return replacement;
 
+    var converted_buffer: [256]u8 = @splat(0);
+    var converted = converted_buffer[0..suffix.len];
+    @memcpy(converted, suffix);
+    for (.{ "D3D", "2D", "3D" }) |needle| { // Special case to keep D3Dxx (and 2D/3D) as a single 'word'.
+        if (std.mem.find(u8, converted, needle)) |st| {
+            for (1..needle.len) |i| { // Leave the first uppercase
+                converted[st + i] = std.ascii.toLower(converted[st + i]);
+            }
+        }
+    }
+
     var out_i: usize = 0;
     var prev: u8 = 0;
-    for (suffix, 0..) |chr, i| {
-        const maybe_next: ?u8 = if (suffix.len > i + 1) suffix[i + 1] else null;
+    for (converted, 0..) |chr, i| {
+        const maybe_next: ?u8 = if (converted.len > i + 1) converted[i + 1] else null;
         var underscore = false;
 
         if (i > 0 and std.ascii.isUpper(chr)) {

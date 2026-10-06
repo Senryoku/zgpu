@@ -1667,12 +1667,12 @@ fn ResourcePool(comptime Info: type, comptime Resource: type) type {
 
         pool: Pool,
 
-        fn init(allocator: std.mem.Allocator, capacity: u32) Self {
+        pub fn init(allocator: std.mem.Allocator, capacity: u32) Self {
             const pool = Pool.initCapacity(allocator, capacity) catch unreachable;
             return .{ .pool = pool };
         }
 
-        fn deinit(self: *Self, allocator: std.mem.Allocator) void {
+        pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
             _ = allocator;
             self.pool.deinit();
         }
