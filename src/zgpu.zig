@@ -21,7 +21,7 @@ test {
 
 pub const WindowProvider = struct {
     window: *anyopaque,
-    fn_getTime: *const fn () f64,
+    fn_getTime: *const fn () callconv(.c) f64,
     fn_getFramebufferSize: *const fn (window: *const anyopaque) [2]u32,
     fn_getWin32Window: *const fn (window: *const anyopaque) callconv(.c) *anyopaque = undefined,
     fn_getX11Display: *const fn () callconv(.c) *anyopaque = undefined,
